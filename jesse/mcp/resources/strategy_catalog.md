@@ -1,6 +1,6 @@
-# Strategy Catalog Reference (jesse.trade)
+# Strategy Catalog Reference (local.framework)
 
-The strategy catalog is the list of community strategies published on jesse.trade, the same
+The strategy catalog is the list of community strategies published on local.framework, the same
 list the dashboard's Strategies page shows. Catalog strategies are online; they are not the
 strategies installed in this Jesse project until one is imported. Local strategies are handled
 with `create_strategy`, `read_strategy`, and `write_strategy`; catalog strategies with the three
@@ -21,10 +21,10 @@ Only approved strategies with completed backtest metrics for the chosen period a
 
 ## Access
 
-- Browsing works without a jesse.trade account. Importing needs the project's
+- Browsing works without a local.framework account. Importing needs the project's
   `LICENSE_API_TOKEN` (free and premium strategies alike), and premium strategies also need an
   active Premium plan. Jesse signs in with the token itself; no tool returns it.
-- `code_available` on a browse result is jesse.trade's answer for the signed-in account: only
+- `code_available` on a browse result is local.framework's answer for the signed-in account: only
   import strategies where it is `true`.
 - If `jesse_trade_signed_in` is `false`, tell the user what `jesse_trade_auth.message` says
   (missing or rejected `LICENSE_API_TOKEN`); do not guess another way to import.
@@ -33,14 +33,14 @@ Only approved strategies with completed backtest metrics for the chosen period a
 
 ### browse_strategy_catalog(period=None, sort_by="Sharpe Ratio", submitted_after=None, submitted_before=None, query=None, strategy_type=None, offset=0, limit=10)
 
-Sent to jesse.trade, exactly as the dashboard sends them:
+Sent to local.framework, exactly as the dashboard sends them:
 - `period`: one of `available_filters.periods` (e.g. "Q1 of 2026", "2024 - 2025"). Omitted means
   `available_filters.default_period`, the dashboard's default.
 - `sort_by`: "Sharpe Ratio", "PNL", "Sortino Ratio", "Calmar Ratio", or "Win Rate"; best first.
 - `submitted_after` / `submitted_before`: `YYYY-MM-DD`. Compared with the submission time at
   00:00 UTC of that date, so `submitted_before` excludes submissions made on that day.
 
-Applied by the tool to the ranked list (jesse.trade has no search, type filter, or paging):
+Applied by the tool to the ranked list (local.framework has no search, type filter, or paging):
 - `query`: case-insensitive match on name, description, author, and slug.
 - `strategy_type`: "free" or "premium".
 - `offset` / `limit` (1-25): pagination over the matches, keeping the ranking.
@@ -54,7 +54,7 @@ curves are not included.
 
 ### get_catalog_strategy_metrics(slug, period, symbol, timeframe)
 
-jesse.trade's full metric set (without equity curve) for one symbol (e.g. "ETH-USDT"),
+local.framework's full metric set (without equity curve) for one symbol (e.g. "ETH-USDT"),
 timeframe, and period. `error_type: "not_found"` means the slug is unknown or that combination
 was never backtested.
 
@@ -71,7 +71,7 @@ code. Returns `local_name`, `path`, and `dashboard_url`. It never overwrites a l
 | `license_token_missing` / `license_token_rejected` | No valid `LICENSE_API_TOKEN`; relay the setup steps in `message`. |
 | `catalog_strategy_not_found` | Unknown slug; browse again. |
 | `invalid_request` | Malformed slug, or the catalog code has no Python class. |
-| `authentication_failed`, `connection_error`, `jesse_trade_unavailable`, `jesse_trade_error` | Jesse or jesse.trade problem; stop and tell the user. |
+| `authentication_failed`, `connection_error`, `jesse_trade_unavailable`, `jesse_trade_error` | Jesse or local.framework problem; stop and tell the user. |
 
 Never report an error as "no strategies found", and never retry an auth, access, or exists
 error unchanged.

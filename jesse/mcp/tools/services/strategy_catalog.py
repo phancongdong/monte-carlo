@@ -1,22 +1,22 @@
 """
 Jesse Strategy Catalog Service Functions
 
-Browse, inspect, and import strategies from the jesse.trade strategy catalog (the community
+Browse, inspect, and import strategies from the local.framework strategy catalog (the community
 strategies shown on the dashboard's Strategies page). These are online strategies, not the
 strategies installed in the Jesse project.
 
 Every call goes through the same Jesse API routes the dashboard uses, so Jesse keeps doing
-the talking to jesse.trade and jesse.trade keeps enforcing who may see and import which
+the talking to local.framework and local.framework keeps enforcing who may see and import which
 strategy code:
 
 - GET  /strategy/periods                     trading periods the catalog has metrics for
 - POST /auth/jesse-trade-token               exchanges the project's LICENSE_API_TOKEN for a
-                                             jesse.trade session token
+                                             local.framework session token
 - GET  /strategy/index                       ranked catalog for one period
 - GET  /strategy/jesse-trade/{slug}/metrics  metrics for one symbol/timeframe/period
 - POST /strategy/import                      writes a catalog strategy into strategies/
 
-The jesse.trade session token only travels in the X-Jesse-Trade-Token request header, as
+The local.framework session token only travels in the X-Jesse-Trade-Token request header, as
 the dashboard sends it. It is exchanged again for each call that needs it and is never
 stored, logged, or returned.
 """
@@ -31,24 +31,24 @@ import jesse.mcp.mcp_config as mcp_config
 
 from .auth import hash_password
 
-# Jesse proxies every catalog call to jesse.trade with its own 10-second timeout, so this
+# Jesse proxies every catalog call to local.framework with its own 10-second timeout, so this
 # only has to outlast one upstream call plus Jesse's own work.
 REQUEST_TIMEOUT_SECONDS = 30
 
-# Sort labels exactly as the dashboard's Strategies page sends them. jesse.trade silently
+# Sort labels exactly as the dashboard's Strategies page sends them. local.framework silently
 # ranks by Sharpe Ratio for any other value, so they are validated here instead.
 SORT_OPTIONS = ('Sharpe Ratio', 'PNL', 'Sortino Ratio', 'Calmar Ratio', 'Win Rate')
 DEFAULT_SORT = 'Sharpe Ratio'
 # Values of a catalog strategy's `type`, shown as the FREE/PREMIUM badge in the dashboard.
 STRATEGY_TYPES = ('free', 'premium')
 
-# jesse.trade returns the whole ranked list for a period at once, including every free
+# local.framework returns the whole ranked list for a period at once, including every free
 # strategy's source code and equity curve, so pages are cut here to keep tool results small.
 # A page of 25 summaries, descriptions included, stays a comfortably sized tool result.
 DEFAULT_PAGE_SIZE = 10
 MAX_PAGE_SIZE = 25
 
-# jesse.trade's slug rule (3-150 lowercase letters, digits, and hyphens), checked before any
+# local.framework's slug rule (3-150 lowercase letters, digits, and hyphens), checked before any
 # request so a typo fails with a clear message instead of a proxied 400.
 _SLUG = re.compile(r'[a-z0-9-]{3,150}')
 
@@ -63,16 +63,16 @@ _SUMMARY_METRICS = (
 _OMITTED_METRICS = ('id', 'strategy_id', 'equity_curve', 'created_at', 'updated_at')
 
 CATALOG_SOURCE = (
-    'jesse.trade strategy catalog: community strategies published online. These are not the '
+    'local.framework strategy catalog: community strategies published online. These are not the '
     'strategies installed in this Jesse project until you import one.'
 )
 LICENSE_TOKEN_HELP = (
-    'Create a LICENSE_API_TOKEN at https://jesse.trade/user/api-tokens, add it to the Jesse '
+    'Create a LICENSE_API_TOKEN at  add it to the Jesse '
     "project's .env file as LICENSE_API_TOKEN=..., and restart Jesse. Free and premium "
     'strategies both need it to be imported.'
 )
 PREMIUM_HELP = (
-    'Premium strategies need an active jesse.trade Premium plan (https://jesse.trade/pricing). '
+    'Premium strategies need an active local.framework Premium plan (). '
     'After upgrading, retry the import.'
 )
 
@@ -129,32 +129,32 @@ def _rejected_dashboard_credentials(response: requests.Response, payload: dict) 
     True when Jesse itself refused the MCP worker's dashboard password.
 
     Jesse's own 401 body is {"message": "Invalid password"}, while every failure it proxies
-    from jesse.trade carries "status": "error". That is the only way to tell a bad dashboard
-    password from jesse.trade rejecting the license token, which also arrives as a 401.
+    from local.framework carries "status": "error". That is the only way to tell a bad dashboard
+    password from local.framework rejecting the license token, which also arrives as a 401.
     """
     return response.status_code == 401 and payload.get('status') != 'error'
 
 
 def _upstream_error(action: str, response: requests.Response, payload: dict, not_found_type: str) -> dict:
-    """Map a failed proxied catalog call to a stable MCP error; Jesse forwards jesse.trade's status code."""
+    """Map a failed proxied catalog call to a stable MCP error; Jesse forwards local.framework's status code."""
     message = _message(response, payload)
     if _rejected_dashboard_credentials(response, payload):
         return _error(action, 'authentication_failed', 'Jesse rejected the MCP credentials (dashboard password).')
     if response.status_code == 401:
-        return _error(action, 'license_token_rejected', f'jesse.trade rejected the sign-in ({message}). {LICENSE_TOKEN_HELP}')
+        return _error(action, 'license_token_rejected', f'local.framework rejected the sign-in ({message}). {LICENSE_TOKEN_HELP}')
     if response.status_code == 404:
         return _error(action, not_found_type, message)
     if response.status_code == 400:
         return _error(action, 'invalid_request', message)
     if response.status_code >= 500:
-        # Jesse answers 500 when it cannot reach jesse.trade and forwards jesse.trade's own 5xx.
+        # Jesse answers 500 when it cannot reach local.framework and forwards local.framework's own 5xx.
         return _error(action, 'jesse_trade_unavailable', message, http_status=response.status_code)
     return _error(action, 'jesse_trade_error', message, http_status=response.status_code)
 
 
 def _exchange_jesse_trade_token() -> str:
     """
-    Exchange the project's LICENSE_API_TOKEN for a jesse.trade session token.
+    Exchange the project's LICENSE_API_TOKEN for a local.framework session token.
 
     This is the same exchange the dashboard performs on startup. Doing it per call means a
     plan upgrade or a new LICENSE_API_TOKEN takes effect without restarting anything, and no
@@ -173,10 +173,10 @@ def _exchange_jesse_trade_token() -> str:
     if response.status_code in (401, 403):
         raise _JesseTradeAuthError(
             'license_token_rejected',
-            f'jesse.trade rejected the LICENSE_API_TOKEN ({_message(response, payload)}). {LICENSE_TOKEN_HELP}',
+            f'local.framework rejected the LICENSE_API_TOKEN ({_message(response, payload)}). {LICENSE_TOKEN_HELP}',
         )
     raise _JesseTradeAuthError(
-        'jesse_trade_unavailable', f'Could not sign in to jesse.trade: {_message(response, payload)}'
+        'jesse_trade_unavailable', f'Could not sign in to local.framework: {_message(response, payload)}'
     )
 
 
@@ -193,7 +193,7 @@ def _valid_date(value: str) -> bool:
 
 
 def _summarize(strategy: dict) -> dict:
-    """Reduce one jesse.trade catalog entry to what is needed to compare and choose it."""
+    """Reduce one local.framework catalog entry to what is needed to compare and choose it."""
     user = strategy.get('user')
     metrics = strategy.get('strategy_metrics')
     return {
@@ -202,7 +202,7 @@ def _summarize(strategy: dict) -> dict:
         'type': strategy.get('type'),
         'author': user.get('username') if isinstance(user, dict) else None,
         'description': strategy.get('description'),
-        # jesse.trade only sends code the signed-in account may import (every free strategy;
+        # local.framework only sends code the signed-in account may import (every free strategy;
         # premium ones only to Premium accounts and their author), so this is the import
         # permission without copying the code into the result.
         'code_available': bool(strategy.get('code')),
@@ -226,14 +226,14 @@ def _matches(strategy: dict, query: Optional[str], strategy_type: Optional[str])
 
 
 def _fetch_periods(action: str) -> list[str] | dict:
-    """Return the catalog's trading periods in jesse.trade's order (most recent last), or the MCP error to return."""
+    """Return the catalog's trading periods in local.framework's order (most recent last), or the MCP error to return."""
     response = _request('GET', '/strategy/periods')
     payload = _payload(response)
     if response.status_code != 200:
         return _upstream_error(action, response, payload, 'jesse_trade_error')
     periods = payload.get('periods')
     if not isinstance(periods, list) or not periods:
-        return _error(action, 'unexpected_response', 'jesse.trade returned no trading periods.')
+        return _error(action, 'unexpected_response', 'local.framework returned no trading periods.')
     return [str(period) for period in periods]
 
 
@@ -248,11 +248,11 @@ def browse_strategy_catalog_service(
         limit: int = DEFAULT_PAGE_SIZE,
 ) -> dict:
     """
-    List one page of the jesse.trade strategy catalog, ranked the way the dashboard ranks it.
+    List one page of the local.framework strategy catalog, ranked the way the dashboard ranks it.
 
-    period, sort_by and the submission dates are sent to jesse.trade exactly as the dashboard
+    period, sort_by and the submission dates are sent to local.framework exactly as the dashboard
     sends them. query, strategy_type, offset and limit are applied here to the ranked list
-    jesse.trade returns, because jesse.trade has no search, type filter, or pagination.
+    local.framework returns, because local.framework has no search, type filter, or pagination.
     """
     action = 'strategy_catalog_browse_failed'
     query = (query or '').strip() or None
@@ -290,7 +290,7 @@ def browse_strategy_catalog_service(
                 available_periods=periods,
             )
 
-        # Browsing works without a jesse.trade account, as on the dashboard. Signing in only
+        # Browsing works without a local.framework account, as on the dashboard. Signing in only
         # decides which strategies' code (and therefore imports) the account can access.
         auth_note = None
         token = None
@@ -315,7 +315,7 @@ def browse_strategy_catalog_service(
         return _upstream_error(action, response, payload, 'jesse_trade_error')
     raw_strategies = payload.get('strategies')
     if not isinstance(raw_strategies, list):
-        return _error(action, 'unexpected_response', 'jesse.trade returned no strategy list.')
+        return _error(action, 'unexpected_response', 'local.framework returned no strategy list.')
 
     ranked = [_summarize(strategy) for strategy in raw_strategies if isinstance(strategy, dict)]
     matches = [strategy for strategy in ranked if _matches(strategy, query, strategy_type)]
@@ -323,7 +323,7 @@ def browse_strategy_catalog_service(
     has_more = offset + len(page) < len(matches)
 
     if not ranked:
-        message = f'jesse.trade has no ranked strategies for {selected_period} with these submission dates. Try another period.'
+        message = f'local.framework has no ranked strategies for {selected_period} with these submission dates. Try another period.'
     elif not matches:
         message = f'None of the {len(ranked)} strategies ranked for {selected_period} match query/strategy_type.'
     elif not page:
@@ -366,7 +366,7 @@ def browse_strategy_catalog_service(
 
 
 def get_catalog_strategy_metrics_service(slug: str, period: str, symbol: str, timeframe: str) -> dict:
-    """Fetch the jesse.trade backtest metrics of one catalog strategy for one symbol/timeframe/period."""
+    """Fetch the local.framework backtest metrics of one catalog strategy for one symbol/timeframe/period."""
     action = 'catalog_strategy_metrics_failed'
     slug = slug.strip()
     if not _valid_slug(slug):
@@ -376,14 +376,14 @@ def get_catalog_strategy_metrics_service(slug: str, period: str, symbol: str, ti
         return _error(action, 'invalid_request', 'period, symbol, and timeframe are all required.')
 
     try:
-        # Metrics are public on jesse.trade, so the dashboard fetches them without signing in too.
+        # Metrics are public on local.framework, so the dashboard fetches them without signing in too.
         response = _request('GET', f'/strategy/jesse-trade/{slug}/metrics', params=params)
     except requests.exceptions.RequestException as e:
         return _error(action, 'connection_error', f'Could not connect to Jesse API: {e}')
 
     payload = _payload(response)
     if response.status_code != 200:
-        # jesse.trade answers 404 both for an unknown slug and for a combination it never backtested.
+        # local.framework answers 404 both for an unknown slug and for a combination it never backtested.
         return _upstream_error(action, response, payload, 'not_found') | {'slug': slug, **params}
 
     return {
@@ -409,7 +409,7 @@ def import_catalog_strategy_service(slug: str) -> dict:
         return _error(action, 'invalid_request', 'slug must be the catalog slug from browse_strategy_catalog, e.g. "my-strategy-1".')
 
     try:
-        # Importing always needs a jesse.trade account, so any sign-in failure stops here,
+        # Importing always needs a local.framework account, so any sign-in failure stops here,
         # exactly where the dashboard shows its "Authentication Required" dialog.
         token = _exchange_jesse_trade_token()
         response = _request('POST', '/strategy/import', json_body={'slug': slug}, jesse_trade_token=token)

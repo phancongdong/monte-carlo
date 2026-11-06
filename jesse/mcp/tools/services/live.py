@@ -396,13 +396,13 @@ def _clean_routes(routes: list, data_routes: list, exchange: str, strategies: li
         errors.append('Symbol parameter must contain "-" character!')
     trading_symbols = [r['symbol'] for r in trading if r['symbol']]
     if len(trading_symbols) != len(set(trading_symbols)):
-        errors.append('each exchange-symbol pair can be traded only once! More info: https://docs.jesse.trade/docs/routes.html#trading-multiple-routes')
+        errors.append('each exchange-symbol pair can be traded only once! More info: ')
     quotes = {s[s.rfind('-') + 1:] for s in trading_symbols if '-' in s}
     if len(quotes) > 1:
         errors.append('All trading routes must use the same quote asset')
     data_keys = [(r['symbol'], r['timeframe']) for r in data if r['symbol'] and r['timeframe']]
     if len(data_keys) != len(set(data_keys)):
-        errors.append('each exchange-symbol pair can be traded only once! More info: https://docs.jesse.trade/docs/routes.html#trading-multiple-routes')
+        errors.append('each exchange-symbol pair can be traded only once! More info: ')
     if {(r['symbol'], r['timeframe']) for r in trading} & set(data_keys):
         errors.append("Data routes' timeframe and trading routes' timeframe must be different")
     bad_timeframes = sorted({r['timeframe'] for r in trading + data if r['timeframe'] and r['timeframe'] not in jesse_supported_timeframes})

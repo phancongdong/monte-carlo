@@ -1020,7 +1020,7 @@ def computer_name():
 
 def validate_response(response):
     if response.status_code != 200:
-        err_msg = f"[{response.status_code}]: {response.json()['message']}\nPlease contact us at support@jesse.trade if this is unexpected."
+        err_msg = f"[{response.status_code}]: {response.json()['message']}\nPlease contact us at support@local.invalid if this is unexpected."
 
         if response.status_code not in [401, 403]:
             raise ConnectionError(err_msg)
@@ -1300,7 +1300,7 @@ def validate_cwd() -> None:
     if not is_jesse_project():
         print(
             color(
-                'Current directory is not a project root. You must run commands from the root directory. Read this page for more info: https://docs.jesse.trade/docs/getting-started/#create-a-new-jesse-project',
+                'Current directory is not a project root. You must run commands from the root directory. Read this page for more info: ',
                 'red'
             )
         )

@@ -445,7 +445,7 @@ def _limit_reached_response(result: ConsumeResult, is_guest: bool = False) -> di
         message = (
             "Running research through the AI assistant — backtests, Monte Carlo, "
             "optimizations, and significance tests — requires a Jesse account. "
-            "Sign up for free at jesse.trade to get started."
+            "Sign up for free at local.framework to get started."
         )
     else:
         message = (

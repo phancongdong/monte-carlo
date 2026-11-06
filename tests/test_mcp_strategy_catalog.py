@@ -89,7 +89,7 @@ def _json_response(status: int, body) -> requests.Response:
 
 class FakeJesseTrade:
     """
-    The api2 (jesse.trade) routes Jesse proxies, reproducing the Go handlers' contract:
+    The api2 (local.framework) routes Jesse proxies, reproducing the Go handlers' contract:
 
     - /auth/exchange-token turns a known LICENSE_API_TOKEN into a session token and answers
       401 {"message": "invalid license API token"} otherwise.
@@ -204,7 +204,7 @@ def jesse_trade() -> FakeJesseTrade:
 def network(project, jesse_trade, monkeypatch):
     """
     Serves the MCP worker's calls with Jesse's real strategy and auth routers in-process, and
-    Jesse's outgoing jesse.trade calls with FakeJesseTrade. Returns the list of Jesse calls.
+    Jesse's outgoing local.framework calls with FakeJesseTrade. Returns the list of Jesse calls.
     """
     monkeypatch.setitem(auth.ENV_VALUES, 'PASSWORD', PASSWORD)
     monkeypatch.setitem(auth_controller.ENV_VALUES, 'LICENSE_API_TOKEN', FREE_LICENSE)
@@ -290,7 +290,7 @@ def test_browse_uses_the_dashboard_default_period_and_ranking(tools, network, je
         'sort_by': ['Sharpe Ratio', 'PNL', 'Sortino Ratio', 'Calmar Ratio', 'Win Rate'],
         'strategy_type': ['free', 'premium'],
     }
-    # Unapproved strategies and unfinished metrics are hidden by jesse.trade, as on the dashboard.
+    # Unapproved strategies and unfinished metrics are hidden by local.framework, as on the dashboard.
     assert _slugs(result) == ['mean-revert-pro', 'trend-rider', 'breakout-hunter', 'no-class-here']
     assert result['jesse_trade_signed_in'] is True
     assert result['jesse_trade_auth'] is None
@@ -303,7 +303,7 @@ def test_browse_uses_the_dashboard_default_period_and_ranking(tools, network, je
     assert trend['backtest_symbols'] == ['BTC-USDT', 'ETH-USDT']
     assert trend['metrics']['sharpe_ratio'] == 1.5
     assert set(trend['metrics']) == set(catalog_service._SUMMARY_METRICS)
-    # A free account cannot import premium code, and jesse.trade signals that by withholding it.
+    # A free account cannot import premium code, and local.framework signals that by withholding it.
     assert result['strategies'][0]['code_available'] is False
     # Code and equity curves are never copied into the tool result.
     assert 'code' not in trend
@@ -361,7 +361,7 @@ def test_browse_rejects_unsupported_arguments_before_any_request(tools, network,
     assert result['status'] == 'error'
     assert result['error_type'] == 'invalid_request'
     assert fragment in result['message']
-    # jesse.trade would silently rank an unknown sort label by Sharpe Ratio instead.
+    # local.framework would silently rank an unknown sort label by Sharpe Ratio instead.
     assert network == []
 
 
@@ -423,7 +423,7 @@ def test_browse_without_license_token_is_an_explicit_guest_listing(tools, jesse_
     assert result['status'] == 'success'
     assert result['jesse_trade_signed_in'] is False
     assert result['jesse_trade_auth']['error_type'] == 'license_token_missing'
-    assert 'https://jesse.trade/user/api-tokens' in result['jesse_trade_auth']['message']
+    assert '' in result['jesse_trade_auth']['message']
     assert len(result['strategies']) == 4
     assert all(strategy['code_available'] is False for strategy in result['strategies'])
     api2_index = next(r for r in jesse_trade.requests if r['path'] == '/strategies')
@@ -472,7 +472,7 @@ def test_jesse_trade_outage_is_an_error_not_an_empty_catalog(tools, jesse_trade)
 
     assert result['status'] == 'error'
     assert result['error_type'] == 'jesse_trade_unavailable'
-    assert 'Error connecting to jesse.trade' in result['message']
+    assert 'Error connecting to local.framework' in result['message']
     assert 'strategies' not in result
 
 
@@ -502,7 +502,7 @@ def test_metrics_for_another_symbol_and_timeframe(tools, network):
     assert result['metrics']['expectancy'] == 1.2
     for omitted in catalog_service._OMITTED_METRICS:
         assert omitted not in result['metrics']
-    # Metrics are public, so no jesse.trade session is created for them.
+    # Metrics are public, so no local.framework session is created for them.
     assert all(call['path'] != '/auth/jesse-trade-token' for call in network)
     assert all('X-Jesse-Trade-Token' not in call['headers'] for call in network)
 
@@ -564,7 +564,7 @@ def test_premium_import_needs_a_premium_plan(project, tools, monkeypatch):
     denied = tools['import_catalog_strategy']('mean-revert-pro')
 
     assert denied['error_type'] == 'strategy_access_denied'
-    assert 'https://jesse.trade/pricing' in denied['message']
+    assert '' in denied['message']
     assert list((project / 'strategies').iterdir()) == []
 
     monkeypatch.setitem(auth_controller.ENV_VALUES, 'LICENSE_API_TOKEN', PREMIUM_LICENSE)

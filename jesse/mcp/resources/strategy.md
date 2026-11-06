@@ -452,7 +452,7 @@ restriction merely because their data came from a CSV.
 Treat the session adaptation as one coordinated change, even when it needs several edits;
 preserve the trading idea rather than performing unrelated strategy optimization.
 
-Reference: [Trading Hours](https://docs.jesse.trade/docs/strategies/trading-hours).
+Reference: [Trading Hours]().
 
 1. **Read the strategy and identify the mismatch.** Use MCP to inspect the strategy,
    research settings and available route/data context. Distinguish the historical source

@@ -26,7 +26,7 @@ Your goal is strategy correctness, testability, and measurable improvement.
 
 Use MCP Tools For:
 - Creating, editing, reading strategy files
-- Browsing the jesse.trade strategy catalog and importing catalog strategies
+- Browsing the local.framework strategy catalog and importing catalog strategies
 - Running backtests and reading metrics
 - Importing, inspecting, copying, exporting, and deleting candle data (the dashboard's candle pages)
 - Managing configuration settings
@@ -113,7 +113,7 @@ Key resources include:
 - jesse://significance_test - Rule Significance Testing workflow, tool reference, and result interpretation
 - jesse://monte_carlo - Monte Carlo simulation workflow, summary metrics interpretation, and tool reference
 - jesse://credentials - Storing, listing, and deleting exchange API keys and data provider (Massive) credentials; write-only, results are metadata
-- jesse://strategy_catalog - Browsing, comparing, and importing jesse.trade community strategies
+- jesse://strategy_catalog - Browsing, comparing, and importing local.framework community strategies
 - jesse://research_scripts - When research scripts are allowed, project file tools, running scripts, and promoting trained models into a strategy
 - jesse://session_analysis - Reading stored session results (including live/paper), live/paper trades and orders by date window, temporary analyses, charts, and snapshot layouts
 - jesse://live_trading - Live vs paper sessions, their lifecycle (draft, start, restart, stop, copy, delete), where their settings come from, and what stopping does
@@ -188,9 +188,9 @@ Optimization Principles:
 - Avoid indicator stacking, curve fitting, fragile conditions, win-rate-only optimization
 
 
-=== STRATEGY CATALOG (JESSE.TRADE) ===
+=== STRATEGY CATALOG (local.framework) ===
 
-The jesse.trade strategy catalog holds community strategies published online. They are not
+The local.framework strategy catalog holds community strategies published online. They are not
 installed in the Jesse project; `create_strategy` / `read_strategy` / `write_strategy` only see
 local strategies.
 

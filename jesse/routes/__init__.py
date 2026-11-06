@@ -42,7 +42,7 @@ class RouterClass:
 
             if count != 1:
                 raise exceptions.InvalidRoutes(
-                    'each exchange-symbol pair can be traded only once. \nMore info: https://docs.jesse.trade/docs/routes.html#trading-multiple-routes')
+                    'each exchange-symbol pair can be traded only once. \nMore info: ')
 
         # check to make sure if trading more than one route, they all have the same quote
         # currency because otherwise we cannot calculate the correct performance metrics

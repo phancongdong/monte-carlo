@@ -1,7 +1,7 @@
 """
 Jesse Strategy Catalog Tools
 
-MCP tools for the jesse.trade strategy catalog, the community strategies the dashboard's
+MCP tools for the local.framework strategy catalog, the community strategies the dashboard's
 Strategies page lists. They are online strategies, separate from the strategies installed in
 the Jesse project (those use create_strategy / read_strategy / write_strategy):
 
@@ -10,7 +10,7 @@ the Jesse project (those use create_strategy / read_strategy / write_strategy):
   symbol, timeframe, or period
 - import_catalog_strategy: Copy one catalog strategy into the project as a local strategy
 
-All tools require authentication via Jesse admin password. Signing in to jesse.trade uses the
+All tools require authentication via Jesse admin password. Signing in to local.framework uses the
 project's LICENSE_API_TOKEN inside Jesse; no token is ever returned by these tools.
 
 The tools are async and run their API calls in a worker thread (see offload.py).
@@ -34,7 +34,7 @@ _import_catalog_strategy = serialized(STRATEGY_FILES_LOCK, import_catalog_strate
 
 
 def register_strategy_catalog_tools(mcp):
-    """Register the jesse.trade strategy catalog tools with the MCP server."""
+    """Register the local.framework strategy catalog tools with the MCP server."""
 
     @mcp.tool()
     async def browse_strategy_catalog(
@@ -48,7 +48,7 @@ def register_strategy_catalog_tools(mcp):
             limit: int = DEFAULT_PAGE_SIZE,
     ) -> dict:
         """
-        Browse the jesse.trade strategy catalog: community strategies published online, ranked
+        Browse the local.framework strategy catalog: community strategies published online, ranked
         by their backtest results. These are NOT the strategies installed in this Jesse project;
         a catalog strategy only becomes local after import_catalog_strategy.
 
@@ -59,17 +59,17 @@ def register_strategy_catalog_tools(mcp):
         Only approved strategies with completed metrics for the chosen period are listed, the
         same list the dashboard's Strategies page shows.
 
-        Parameters (sent to jesse.trade, like the dashboard):
+        Parameters (sent to local.framework, like the dashboard):
             period (str, optional): Trading period the ranking metrics cover, exactly as listed in
                 the response's available_filters.periods, e.g. "Q1 of 2026" or "2024 - 2025".
                 Omit to use available_filters.default_period, the dashboard's default.
             sort_by (str): "Sharpe Ratio" (default), "PNL", "Sortino Ratio", "Calmar Ratio",
                 or "Win Rate". Always ranked best first.
             submitted_after / submitted_before (str, optional): Submission date bounds in
-                YYYY-MM-DD. jesse.trade compares them with the submission time at 00:00 UTC of
+                YYYY-MM-DD. local.framework compares them with the submission time at 00:00 UTC of
                 that date, so submitted_before excludes strategies submitted on that day.
 
-        Parameters (applied by this tool to the ranked list, which jesse.trade returns whole):
+        Parameters (applied by this tool to the ranked list, which local.framework returns whole):
             query (str, optional): Case-insensitive text matched against name, description,
                 author username, and slug. Keeps the ranking order.
             strategy_type (str, optional): "free" or "premium".
@@ -80,7 +80,7 @@ def register_strategy_catalog_tools(mcp):
             dict: On success:
             {
                 "status": "success",
-                "source": "jesse.trade strategy catalog: ...",
+                "source": "local.framework strategy catalog: ...",
                 "message": "Showing 1-10 of 42 matching catalog strategies for Q1 of 2026.",
                 "filters": {"period": ..., "sort_by": ..., "submitted_after": ..., "submitted_before": ...,
                             "query": ..., "strategy_type": ...},
@@ -108,7 +108,7 @@ def register_strategy_catalog_tools(mcp):
                 }]
             }
 
-            When jesse.trade sign-in is unavailable, browsing still succeeds (as on the
+            When local.framework sign-in is unavailable, browsing still succeeds (as on the
             dashboard) with jesse_trade_signed_in false, every code_available false, and
             jesse_trade_auth = {"error_type": "license_token_missing" | "license_token_rejected"
             | "jesse_trade_unavailable", "message": ...}. Tell the user; imports need it fixed.
@@ -130,7 +130,7 @@ def register_strategy_catalog_tools(mcp):
     @mcp.tool()
     async def get_catalog_strategy_metrics(slug: str, period: str, symbol: str, timeframe: str) -> dict:
         """
-        Get jesse.trade's backtest metrics for one catalog strategy on a specific symbol,
+        Get local.framework's backtest metrics for one catalog strategy on a specific symbol,
         timeframe, and period, to check how a candidate holds up beyond the default combination
         shown by browse_strategy_catalog. Read-only; it imports nothing.
 
@@ -142,11 +142,11 @@ def register_strategy_catalog_tools(mcp):
 
         Returns:
             dict: {"status": "success", "slug", "period", "symbol", "timeframe", "metrics": {...}}
-            where metrics holds jesse.trade's full metric set (net_profit_percentage,
+            where metrics holds local.framework's full metric set (net_profit_percentage,
             max_drawdown, sharpe_ratio, win_rate, total_completed_trades, expectancy, ...,
             "status") without the equity curve.
 
-            Errors: error_type "not_found" when the slug is unknown or jesse.trade has no
+            Errors: error_type "not_found" when the slug is unknown or local.framework has no
             metrics for that combination, "invalid_request" for a malformed argument (symbols
             must look like "BTC-USDT"), or "authentication_failed", "connection_error",
             "jesse_trade_unavailable", "jesse_trade_error".
@@ -156,7 +156,7 @@ def register_strategy_catalog_tools(mcp):
     @mcp.tool()
     async def import_catalog_strategy(slug: str) -> dict:
         """
-        Import one jesse.trade catalog strategy into this Jesse project as a local strategy,
+        Import one local.framework catalog strategy into this Jesse project as a local strategy,
         exactly like the dashboard's "Import Strategy" button. Only import a strategy the user
         chose or approved.
 

@@ -7,7 +7,7 @@ from starlette.responses import JSONResponse
 
 from jesse.services.nofollow_fs import component_problem, extended_path
 
-# Strategy folder names are class names, and imports from jesse.trade are sanitized to this
+# Strategy folder names are class names, and imports from local.framework are sanitized to this
 # same set. Rejecting everything else (path separators, dots) keeps the report path inside
 # strategies/ (symlinked strategy folders are still followed; see save_report).
 _REPORT_STRATEGY_NAME = re.compile(r'[A-Za-z0-9_-]+')

@@ -1,12 +1,12 @@
 """
-The Jesse API routes that call jesse.trade (strategy catalog, strategy import, and the
+The Jesse API routes that call local.framework (strategy catalog, strategy import, and the
 LICENSE_API_TOKEN exchange) run in FastAPI's threadpool.
 
 Jesse's real strategy and auth routers are served by uvicorn on a loopback port, and a local
-stand-in for jesse.trade's api2 answers their outgoing requests over real HTTP, so the event
+stand-in for local.framework's api2 answers their outgoing requests over real HTTP, so the event
 loop, the threadpool, and `requests` behave as they do in `jesse run`. The tests pin what each
 route sends and returns (parity with the handlers' documented responses), that dashboard
-authentication and the licensing checks still apply, that a slow jesse.trade no longer holds
+authentication and the licensing checks still apply, that a slow local.framework no longer holds
 up other requests, and that overlapping imports of one class name cannot both succeed.
 """
 import inspect
@@ -34,7 +34,7 @@ PASSWORD = 'jesse-trade-routes-password'
 DASHBOARD_AUTH = {'Authorization': sha256(PASSWORD.encode('utf-8')).hexdigest()}
 LICENSE = 'fake-license-token-for-tests'
 # What the stand-in hands out for LICENSE; strategy code is only returned with this bearer,
-# the way jesse.trade withholds code from guests and from plans without access.
+# the way local.framework withholds code from guests and from plans without access.
 SESSION_TOKEN = 'fake-jesse-trade-session-token'
 USER = {'username': 'tester', 'plan': 'free'}
 SLUG = 'demo-strategy'
@@ -42,7 +42,7 @@ CLASS_NAME = 'DemoImported'
 # Long enough that a blocked event loop is unmistakable, short of the routes' 10 s timeout.
 HOLD_SECONDS = 5
 # A probe on a free event loop answers in milliseconds; anything near HOLD_SECONDS means it
-# waited for the held jesse.trade request.
+# waited for the held local.framework request.
 RESPONSIVE_SECONDS = 1.5
 # Upper bound for server startup and any single request, so a regression fails instead of hanging.
 WAIT_SECONDS = 15
@@ -54,7 +54,7 @@ def _code(class_name: str, marker: str = '') -> str:
 
 class _JesseTrade:
     """
-    Local stand-in for jesse.trade's api2. By default it behaves like the real service for
+    Local stand-in for local.framework's api2. By default it behaves like the real service for
     these routes: the license exchange accepts only LICENSE, and a strategy's code is returned
     only to SESSION_TOKEN. `replies[(method, path)] = (status, text)` overrides one endpoint;
     paths in `hold` wait for `release` before answering. Every request is recorded.
@@ -205,8 +205,8 @@ def jesse(project, jesse_trade, monkeypatch):
         yield server
 
 
-# Each route: the Jesse request, the jesse.trade request it makes, and the prefix of its
-# error message when jesse.trade answers with an error status.
+# Each route: the Jesse request, the local.framework request it makes, and the prefix of its
+# error message when local.framework answers with an error status.
 ROUTES = {
     'index': {
         'call': ('GET', '/strategy/index', {'params': {'period': 'Q1 of 2026', 'sort_by': 'PNL',
@@ -247,7 +247,7 @@ ROUTES = {
         'failure': 'Failed to exchange token: ',
     },
 }
-# Routes that forward the dashboard's X-Jesse-Trade-Token to jesse.trade as a bearer token.
+# Routes that forward the dashboard's X-Jesse-Trade-Token to local.framework as a bearer token.
 FORWARDS_TOKEN = {'index', 'strategy', 'metrics', 'import'}
 
 
@@ -287,7 +287,7 @@ def test_every_jesse_trade_route_is_a_threadpool_handler():
                                                    if (route, with_token) != ('import', False)])
 def test_requests_and_successful_responses_are_unchanged(jesse, jesse_trade, project, route, with_token):
     if route == 'strategy' and not with_token:
-        # A guest sees the listing without code, exactly as jesse.trade returns it.
+        # A guest sees the listing without code, exactly as local.framework returns it.
         expected = {'slug': SLUG, 'name': SLUG, 'code': None}
     else:
         expected = _expected_success(route)
@@ -329,7 +329,7 @@ def test_unreachable_jesse_trade_is_a_500(jesse, jesse_trade, project, route, mo
 
     assert response.status_code == 500
     assert response.json()['status'] == 'error'
-    assert response.json()['message'].startswith('Error connecting to jesse.trade: ')
+    assert response.json()['message'].startswith('Error connecting to local.framework: ')
     assert os.listdir(project / 'strategies') == []
 
 
@@ -400,7 +400,7 @@ def test_import_refusals_for_classless_code_and_an_existing_strategy(jesse, jess
 @pytest.mark.parametrize('route', ROUTES)
 def test_a_slow_jesse_trade_does_not_hold_up_other_requests(jesse, jesse_trade, route):
     """
-    While one route waits on jesse.trade, an async route on the same app answers at once.
+    While one route waits on local.framework, an async route on the same app answers at once.
     With an `async def` handler the whole event loop waited out the held request.
     """
     jesse_trade.hold.add(ROUTES[route]['upstream'][1])
@@ -435,7 +435,7 @@ def _slow_strategy_folder_creation(monkeypatch) -> None:
 
     def slow_makedirs(path, *args, **kwargs):
         # 0.4 s is far longer than the time between the two requests reaching import_strategy
-        # once jesse.trade releases both downloads together.
+        # once local.framework releases both downloads together.
         if str(path).startswith('strategies/'):
             time.sleep(0.4)
         return real_makedirs(path, *args, **kwargs)
@@ -444,7 +444,7 @@ def _slow_strategy_folder_creation(monkeypatch) -> None:
 
 
 def _import_both(jesse: _Jesse, jesse_trade: _JesseTrade, slugs: list) -> dict:
-    """Start imports of `slugs` together; release jesse.trade once all downloads are in flight."""
+    """Start imports of `slugs` together; release local.framework once all downloads are in flight."""
     jesse_trade.hold.update(f'/strategies/{slug}' for slug in slugs)
     results = {}
     threads = [threading.Thread(target=lambda s=slug: results.setdefault(s, _call(jesse, 'import', json={'slug': s})))

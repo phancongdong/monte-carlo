@@ -30,7 +30,7 @@ def install(is_live_plugin_already_installed: bool, strict: bool):
     # if no value is set for LICENSE_API_TOKEN, then no need to continue
     if not ENV_VALUES['LICENSE_API_TOKEN']:
         if strict:
-            print("No license API token set. Please set the LICENSE_API_TOKEN environment variable to continue. If you don't have one yet, create one at https://jesse.trade/user/api-tokens" )
+            print("No license API token set. Please set the LICENSE_API_TOKEN environment variable to continue. If you don't have one yet, create one at " )
         return
     else:
         access_token = ENV_VALUES['LICENSE_API_TOKEN']
@@ -55,7 +55,7 @@ def install(is_live_plugin_already_installed: bool, strict: bool):
     print('is_arm', is_arm)
     # ARM is supported on macOS and Linux; Windows on ARM is not.
     if is_arm and os_name == 'windows':
-        raise NotImplementedError('ARM versions of Windows are not supported. If you need them, send a request to contact@jesse.trade')
+        raise NotImplementedError('ARM versions of Windows are not supported. If you need them, send a request to contact@local.framework')
 
     # format os_name to something acceptable for the API
     if os_name == 'mac':

@@ -66,7 +66,7 @@ def register_tools(mcp):
     # Strategy-related tools (creating/managing trading strategies)
     register_strategy_tools(mcp)
 
-    # jesse.trade strategy catalog tools (browsing and importing community strategies)
+    # local.framework strategy catalog tools (browsing and importing community strategies)
     register_strategy_catalog_tools(mcp)
 
     # Backtest-related tools (running and managing backtests)

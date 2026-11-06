@@ -9,11 +9,11 @@ by a stand-in that records what reached it:
 - the process manager: /live hands the session to `_Processes`, which records the start and
   marks the session active (what the Redis worker set does) but never runs it, and
   `jesse_live.live_mode` is a module whose `run` fails the test if anything calls it;
-- jesse.trade: a local HTTP double records unexpected plan preflight requests; MCP starts
+- local.framework: a local HTTP double records unexpected plan preflight requests; MCP starts
   must leave the actual license checks to the session plugin, just like dashboard starts;
 - the repositories' unit-test guard, which would otherwise make them skip the database.
 
-Nothing starts a live or paper session, contacts an exchange or jesse.trade, or reads a real
+Nothing starts a live or paper session, contacts an exchange or local.framework, or reads a real
 env, key, or wallet file. Key values below are fake sentinels, checked for in every result.
 """
 import json
@@ -151,7 +151,7 @@ class _Processes:
 
 class _JesseTrade:
     """
-    Local HTTP double of jesse.trade's /v2/user-info (the plan and its limits). It answers only
+    Local HTTP double of local.framework's /v2/user-info (the plan and its limits). It answers only
     the fake license token; `status` can make it fail. Records each request's Authorization.
     """
 
@@ -714,7 +714,7 @@ def test_only_drafts_start_and_a_started_session_is_never_started_twice(jesse):
 
     again = live_service.start_live_session_service(draft)
     assert again['error_type'] == 'not_draft' and len(jesse.processes.started) == 1
-    # Refused before asking jesse.trade or reaching /live (which would refuse it again with 409).
+    # Refused before asking local.framework or reaching /live (which would refuse it again with 409).
     assert len(jesse.jesse_trade.authorizations) == plan_requests
     assert [path for _method, path in jesse.requests].count('/live') == 1
     assert live_service.start_live_session_service(str(uuid.uuid4()))['error_type'] == 'not_found'

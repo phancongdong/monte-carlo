@@ -20,14 +20,14 @@ from jesse.info import JESSE_API2_URL
 
 router = APIRouter(prefix="/strategy", tags=["Strategy"], dependencies=[Depends(require_auth)])
 
-# The jesse.trade routes below wait on blocking `requests` calls (10 s timeout each), so they
-# are plain `def` handlers: FastAPI runs them in its threadpool, and a slow jesse.trade cannot
+# The local.framework routes below wait on blocking `requests` calls (10 s timeout each), so they
+# are plain `def` handlers: FastAPI runs them in its threadpool, and a slow local.framework cannot
 # hold up the event loop that serves every other route, the websockets, and the /mcp proxy.
 # Running in threads lets two imports overlap, and strategy_handler.import_strategy checks
 # that the folder is missing before it writes into it with makedirs(exist_ok=True). This lock
 # keeps that local check-and-write one at a time within this process, so two imports of the
 # same class name cannot both report success with one's code replacing the other's. The
-# download from jesse.trade stays outside the lock.
+# download from local.framework stays outside the lock.
 _IMPORT_WRITE_LOCK = threading.Lock()
 
 
@@ -122,7 +122,7 @@ def index_jesse_trade_strategies(
         jesse_trade_token: Optional[str] = Header(None, alias="X-Jesse-Trade-Token")
 ) -> JSONResponse:
     """
-    Browse strategies from jesse.trade
+    Browse strategies from local.framework
     """
 
     try:
@@ -153,7 +153,7 @@ def index_jesse_trade_strategies(
     except requests.exceptions.RequestException as e:
         return JSONResponse({
             'status': 'error',
-            'message': f'Error connecting to jesse.trade: {str(e)}'
+            'message': f'Error connecting to local.framework: {str(e)}'
         },         status_code=500)
 
 
@@ -161,7 +161,7 @@ def index_jesse_trade_strategies(
 def get_jesse_trade_periods(
 ) -> JSONResponse:
     """
-    Get available trading periods from jesse.trade
+    Get available trading periods from local.framework
     """
 
     try:
@@ -180,7 +180,7 @@ def get_jesse_trade_periods(
     except requests.exceptions.RequestException as e:
         return JSONResponse({
             'status': 'error',
-            'message': f'Error connecting to jesse.trade: {str(e)}'
+            'message': f'Error connecting to local.framework: {str(e)}'
         }, status_code=500)
 
 
@@ -190,7 +190,7 @@ def get_jesse_trade_strategy(
         jesse_trade_token: Optional[str] = Header(None, alias="X-Jesse-Trade-Token")
 ) -> JSONResponse:
     """
-    Get a specific strategy from jesse.trade
+    Get a specific strategy from local.framework
     """
 
     try:
@@ -214,7 +214,7 @@ def get_jesse_trade_strategy(
     except requests.exceptions.RequestException as e:
         return JSONResponse({
             'status': 'error',
-            'message': f'Error connecting to jesse.trade: {str(e)}'
+            'message': f'Error connecting to local.framework: {str(e)}'
         }, status_code=500)
 
 
@@ -227,7 +227,7 @@ def get_jesse_trade_strategy_metrics(
         jesse_trade_token: Optional[str] = Header(None, alias="X-Jesse-Trade-Token")
 ) -> JSONResponse:
     """
-    Get metrics for a specific strategy from jesse.trade
+    Get metrics for a specific strategy from local.framework
     """
 
     try:
@@ -252,7 +252,7 @@ def get_jesse_trade_strategy_metrics(
     except requests.exceptions.RequestException as e:
         return JSONResponse({
             'status': 'error',
-            'message': f'Error connecting to jesse.trade: {str(e)}'
+            'message': f'Error connecting to local.framework: {str(e)}'
         }, status_code=500)
 
 
@@ -262,11 +262,11 @@ def import_strategy(
         jesse_trade_token: Optional[str] = Header(None, alias="X-Jesse-Trade-Token")
 ) -> JSONResponse:
     """
-    Import a strategy from jesse.trade
+    Import a strategy from local.framework
     """
 
     try:
-        # Fetch the strategy from jesse.trade
+        # Fetch the strategy from local.framework
         headers = {}
         if jesse_trade_token:
             headers['Authorization'] = f'Bearer {jesse_trade_token}'
@@ -314,5 +314,5 @@ def import_strategy(
     except requests.exceptions.RequestException as e:
         return JSONResponse({
             'status': 'error',
-            'message': f'Error connecting to jesse.trade: {str(e)}'
+            'message': f'Error connecting to local.framework: {str(e)}'
         }, status_code=500)

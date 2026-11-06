@@ -1356,7 +1356,7 @@ def _prepare_routes(
         except TypeError:
             raise exceptions.InvalidStrategy(
                 "Strategy validation failed. Make sure your strategy has the mandatory methods such as should_long(), "
-                "go_long(), etc. For working examples, visit: https://jesse.trade/strategies"
+                "go_long(), etc. For working examples, visit: "
             )
         except:
             raise

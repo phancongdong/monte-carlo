@@ -8,7 +8,7 @@ Real records are written into that schema with Jesse's own model functions, then
 authenticated /mcp route and exercises the tools: results of every session type, a real
 matplotlib analysis over snapshots, the chart as MCP image content, and earlier tools,
 including a metered run whose usage check waits on a local stand-in for the licensing backend,
-and the strategy catalog and license routes against a local stand-in for jesse.trade.
+and the strategy catalog and license routes against a local stand-in for local.framework.
 `jesse run` skips MCP in test mode, so each instance is started through a small entry point
 that calls the real run_mcp_server inside the server process, just before the dashboard is
 served, as a normal `jesse run` does; the worker gets its OS-assigned port the real way.
@@ -972,7 +972,7 @@ CATALOG_CODE = STRATEGY_SOURCE.replace('E2EStrategy', 'E2ECatalogImport')
 
 class _CatalogBackend:
     """
-    Stands in for jesse.trade's catalog and licensing API on an instance's api2 port. Like the
+    Stands in for local.framework's catalog and licensing API on an instance's api2 port. Like the
     real service, it exchanges only FAKE_LICENSE (while `accept_license` is set) for a session
     token and includes a strategy's code only for that token. Requests to a path in `hold`
     wait for `release` (at most 8 s, under Jesse's 10-second timeout for these requests).
@@ -1056,9 +1056,9 @@ class _CatalogBackend:
 def test_catalog_and_license_routes_keep_their_checks_and_do_not_stall_the_api_or_mcp(instance):
     """
     A third instance with a fake LICENSE_API_TOKEN, whose api2 port is served by a local
-    stand-in for jesse.trade (JESSE_API_URL points at a closed port, so nothing leaves the
+    stand-in for local.framework (JESSE_API_URL points at a closed port, so nothing leaves the
     machine). Dashboard authentication and the license checks answer as before, and while
-    jesse.trade is slow to answer, the dashboard API and the MCP tools, including results of
+    local.framework is slow to answer, the dashboard API and the MCP tools, including results of
     the seeded sessions, still answer at once.
     """
     import anyio
@@ -1089,7 +1089,7 @@ def test_catalog_and_license_routes_keep_their_checks_and_do_not_stall_the_api_o
             _wait_ready(url, password, process, project)
             _wait_for_mcp(url, token, process, project)
 
-            # Dashboard authentication comes first: nothing reaches jesse.trade without it.
+            # Dashboard authentication comes first: nothing reaches local.framework without it.
             for method, path, kwargs in routes:
                 for headers in ({}, {'Authorization': 'wrong'}, {'Authorization': password}):
                     denied = requests.request(method, url + path, headers=headers, timeout=30, **kwargs)
@@ -1125,7 +1125,7 @@ def test_catalog_and_license_routes_keep_their_checks_and_do_not_stall_the_api_o
             assert os.listdir(project / 'strategies') == []
             backend.accept_license = True
 
-            # jesse.trade now holds its answers: the dashboard's periods request and the MCP
+            # local.framework now holds its answers: the dashboard's periods request and the MCP
             # browse (whose first request is the same route) both wait on it.
             backend.hold.add('/strategies/periods')
             held = {}
@@ -1167,7 +1167,7 @@ def test_catalog_and_license_routes_keep_their_checks_and_do_not_stall_the_api_o
             _stop(process, log)
             shutil.rmtree(project, ignore_errors=True)
 
-    # Both probes run while jesse.trade holds its answers for up to 8 s; the bounds leave room
+    # Both probes run while local.framework holds its answers for up to 8 s; the bounds leave room
     # for a loaded machine, and a blocked event loop would push them to the full hold.
     assert out['still_held'] is True
     assert out['api_status'] == {'is_test_env': True, 'postgres_schema': SCHEMA} and out['api_seconds'] < 1.5
@@ -1444,7 +1444,7 @@ def test_live_session_management_through_the_mcp_client(instance):
 
 class _PlanBackend:
     """
-    Local stand-in for jesse.trade's /api/v2/user-info (plan and limits) on an instance's
+    Local stand-in for local.framework's /api/v2/user-info (plan and limits) on an instance's
     JESSE_API_URL, recording any unexpected plan preflight requests.
     """
 
