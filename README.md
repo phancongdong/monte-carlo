@@ -1,5 +1,8 @@
 # Monte Carlo Simulation & Quantitative Trading Framework
 
+> 💬 **Cộng đồng**: Trao đổi AI, Quant, Bot trade tại: https://t.me/donkquantlab
+
+
 An advanced algorithmic trading and quantitative research framework in Python, specializing in strategy robustness verification, risk modeling, and Monte Carlo simulation.
 
 ---
