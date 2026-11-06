@@ -1,0 +1,747 @@
+"""
+Jesse Backtest Management Tools
+
+This module provides MCP tools for managing Jesse backtests,
+using the backtest controller endpoints like the dashboard does.
+
+The tools include:
+- update_backtest_draft: Create or update a backtest draft configuration
+- update_backtest_notes: Update backtest session title, description, and strategy code notes
+- get_backtest_session: Get details of a specific backtest session by ID
+- get_backtest_sessions: List backtest sessions with optional filters
+- run_backtest: Execute a backtest using BacktestRequestJson configuration
+- cancel_backtest: Cancel a running backtest
+- purge_backtest_sessions: Purge old backtest sessions from the database
+
+The tools are async and run their API calls in a worker thread (see offload.py).
+"""
+
+from .offload import run_blocking
+from .services.runners import invalid_where
+from .services import (
+    create_backtest_draft_service,
+    update_backtest_draft_service,
+    update_backtest_notes_service,
+    get_backtest_session_service,
+    get_backtest_sessions_service,
+    run_backtest_service,
+    cancel_backtest_service,
+    export_backtest_report_service,
+    purge_backtest_sessions_service
+)
+from jesse.mcp.usage_limits import gated, CREDIT_WEIGHTS
+from .run_config_arguments import ConfigOverrides
+
+def register_backtest_tools(mcp):
+    """
+    Register the backtest management tools with the MCP server.
+
+    Args:
+        mcp: The MCP server instance.
+
+    Returns:
+        None
+    """
+    # The usage check and the run request happen in one worker-thread call, so a cancellation
+    # never falls between them (a credit used without the run being attempted).
+    gated_run_backtest = gated(weight=CREDIT_WEIGHTS["run_backtest"])(run_backtest_service)
+
+    @mcp.tool()
+    async def create_backtest_draft(
+        exchange: str = "Binance Perpetual Futures",
+        routes: str = '[{"exchange": "Binance Perpetual Futures", "strategy": "ExampleStrategy", "symbol": "BTC-USDT", "timeframe": "4h"}]',
+        data_routes: str = '[]',
+        start_date: str = "2024-01-01",
+        finish_date: str = "2024-03-01",
+        debug_mode: bool = False,
+        export_csv: bool = False,
+        export_json: bool = False,
+        export_chart: bool = True,
+        fast_mode: bool = True,
+        benchmark: bool = True,
+        title: str = None,
+        description: str = None,
+        strategy_summary: str = None,
+        change_summary: str = None,
+        rationale: str = None,
+        fee: float = None,
+        leverage: int = None,
+        leverage_mode: str = None,
+        balance: float = None,
+        warm_up_candles: int = None,
+        config_overrides: ConfigOverrides = None,
+        export_pdf: bool = False,
+    ) -> dict:
+        """
+        Create a new backtest draft session with specified parameters.
+
+        Creates a new backtest session with the provided configuration parameters.
+        This initializes a draft that can be modified using update_backtest_draft()
+        before execution with run_backtest().
+
+        Parameters:
+            exchange (str): Exchange name for backtesting. Supported exchanges include:
+                - "Binance Perpetual Futures" (default)
+                - "Bybit USDT Perpetual"
+                - "Bybit USDC Perpetual"
+                - "Gate USDT Perpetual"
+                - "Binance Spot"
+                - "Bybit Spot"
+                - "Coinbase Spot"
+                - "Bitfinex Spot"
+            routes (str): JSON string array of route configuration objects. Each route defines:
+                - exchange: Exchange name (must match the main exchange parameter)
+                - strategy: Strategy class name (e.g., "MyStrategy")
+                - symbol: Trading pair (e.g., "BTC-USDT")
+                - timeframe: Candle timeframe (e.g., "1h", "4h", "1D")
+                Shape: Array of objects with required fields: exchange, strategy, symbol, timeframe
+            data_routes (str): JSON string array of data route objects for additional data feeds.
+                Each data route contains exchange, symbol, and timeframe fields.
+                Shape: Array of objects with fields: exchange, symbol, timeframe
+            start_date (str): Backtest start date in YYYY-MM-DD format
+            finish_date (str): Backtest end date in YYYY-MM-DD format
+            debug_mode (bool): Enable detailed debug logging during backtest execution
+            export_csv (bool): Export backtest results as CSV file
+            export_json (bool): Export backtest results as JSON file
+            export_chart (bool): Export chart data for visualization
+            fast_mode (bool): Enable fast mode for quicker execution (reduced precision).
+                Defaults to True. The agent may set it False for a full-precision run.
+            benchmark (bool): Run benchmark comparison against buy-and-hold strategy
+            title (str, optional): Human-readable note title for this MCP-created session.
+                If omitted, Jesse MCP generates one from the first route.
+            description (str, optional): Note description explaining the session purpose.
+                If omitted, Jesse MCP generates a short markdown summary.
+            strategy_summary (str, optional): One-sentence summary of the strategy being tested.
+            change_summary (str, optional): What changed before this backtest, if MCP edited a strategy.
+            rationale (str, optional): Why the MCP made the change or ran this test.
+
+        Run settings (all optional; omitted ones come from the saved backtest defaults for this
+        exchange, else Jesse's built-in defaults):
+            fee: Exchange fee as a fraction per side (0.0006 = 0.06%).
+            leverage: Futures leverage, a whole number of 1 or more. Ignored on spot exchanges.
+            leverage_mode: "cross" or "isolated" (futures only; must be supported by the exchange).
+            balance: Starting balance.
+            warm_up_candles: Candles loaded before the start date to warm up indicators.
+            config_overrides: JSON object with any other run-config field: logging (the log flags),
+                e.g. {"exchange": {"fee": 0.0002, "futures_leverage": 20}}. Named arguments win over it.
+            export_pdf (bool): Keep what the PDF report needs. Defaults to False: set it only when the
+                user asks for a PDF report, then call export_backtest_report() after the run.
+        Set these here instead of editing the draft state afterwards. The response's `run_config` is
+        exactly what the draft will run with, `config_source` says where each value came from
+        (explicit / saved_default / exchange_default / hard_default), and `config_warnings` flags a
+        fee or leverage that is only Jesse's built-in default, or leverage ignored on a spot exchange.
+
+        Returns:
+            dict: Session creation confirmation containing:
+                - backtest_id: UUID string of the created session
+                - message: Success confirmation message
+                - Additional configuration metadata
+                Shape: {"backtest_id": "uuid-string", "message": "string", ...}
+
+        Raises:
+            ValidationError: If route configuration is invalid or exchange is unsupported
+            DatabaseError: If session creation fails in the database
+
+        Example:
+            >>> draft = create_backtest_draft(
+            ...     exchange="Binance Spot",
+            ...     routes='[{"exchange": "Binance Spot", "strategy": "MyStrategy", "symbol": "BTC-USDT", "timeframe": "4h"}]',
+            ...     start_date="2024-01-01",
+            ...     finish_date="2024-12-31"
+            ... )
+            >>> print(draft["backtest_id"])  # UUID of new session
+        """
+        return await run_blocking(
+            create_backtest_draft_service,
+            exchange=exchange,
+            routes=routes,
+            data_routes=data_routes,
+            start_date=start_date,
+            finish_date=finish_date,
+            debug_mode=debug_mode,
+            export_csv=export_csv,
+            export_json=export_json,
+            export_chart=export_chart,
+            fast_mode=fast_mode,
+            benchmark=benchmark,
+            title=title,
+            description=description,
+            strategy_summary=strategy_summary,
+            change_summary=change_summary,
+            rationale=rationale,
+            fee=fee,
+            leverage=leverage,
+            leverage_mode=leverage_mode,
+            balance=balance,
+            warm_up_candles=warm_up_candles,
+            config_overrides=config_overrides,
+            export_pdf=export_pdf,
+        )
+
+    @mcp.tool()
+    async def update_backtest_draft(
+        backtest_id: str,
+        state: str = None,
+        fee: float = None,
+        leverage: int = None,
+        leverage_mode: str = None,
+        balance: float = None,
+        warm_up_candles: int = None,
+        config_overrides: ConfigOverrides = None,
+    ) -> dict:
+        """
+        Update an existing backtest draft configuration with complete state object.
+
+        Replaces the entire state of an existing backtest session with new configuration.
+        This is the primary method for modifying backtest parameters after creation.
+        For complex modifications (adding routes, changing dates, etc.), first retrieve
+        the current state with get_backtest_session(), perform your modifications,
+        then update with the complete merged state.
+
+        Parameters:
+            backtest_id (str): UUID string of the backtest session to update
+                Shape: UUID format string (e.g., "550e8400-e29b-41d4-a716-446655440000")
+            state (str): JSON string containing complete state object with 'form' and 'results' sections.
+                The state object must contain:
+                - form: Configuration object with exchange, routes, dates, export options
+                - results: Results object with showResults and executing flags
+                Shape: JSON string representing {"form": {...}, "results": {...}}
+
+        Returns:
+            dict: Update confirmation containing:
+                - success: Boolean indicating successful update
+                - message: Status message string
+                - backtest_id: The updated session ID (same as input)
+                Shape: {"success": bool, "message": "string", "backtest_id": "uuid-string"}
+
+        Raises:
+            NotFoundError: If backtest_id does not exist
+            ValidationError: If state JSON is malformed or invalid
+            DatabaseError: If update fails in the database
+
+        Workflow:
+            1. Retrieve current state: session = get_backtest_session(backtest_id)
+            2. Extract state object: current_state = session["data"]["session"]["state"]["state"]
+            3. Modify the state object as needed (add routes, change dates, etc.)
+            4. Convert modified state back to JSON string
+            5. Call update_backtest_draft(backtest_id, json_string)
+
+        Example:
+            >>> # Add a new route to existing session
+            >>> session = get_backtest_session("550e8400-e29b-41d4-a716-446655440000")
+            >>> current_state = session["data"]["session"]["state"]["state"]
+            >>> new_route = {"exchange": "Binance Spot", "strategy": "MyStrategy", "symbol": "ETH-USDT", "timeframe": "1h"}
+            >>> current_state["form"]["routes"].append(new_route)
+            >>> import json
+            >>> updated_state = json.dumps(current_state)
+            >>> result = update_backtest_draft("550e8400-e29b-41d4-a716-446655440000", updated_state)
+
+        To change only run settings, omit `state` and pass any of fee, leverage, leverage_mode,
+        balance, warm_up_candles or config_overrides (same meaning as in the create tool). The
+        stored draft keeps everything else; only drafts can change. The response shows the new
+        `run_config` and `config_source` ("explicit" for what this call set, "stored" for the rest).
+        Do not combine `state` with run settings.
+        """
+        return await run_blocking(
+            update_backtest_draft_service, backtest_id, state,
+            fee=fee, leverage=leverage, leverage_mode=leverage_mode, balance=balance,
+            warm_up_candles=warm_up_candles, config_overrides=config_overrides,
+        )
+
+    @mcp.tool()
+    async def update_backtest_notes(
+        session_id: str,
+        title: str = None,
+        description: str = None,
+        strategy_codes: str = None
+    ) -> dict:
+        """
+        Update notes for an existing backtest session.
+
+        Stores the same note metadata used by the dashboard: title, description,
+        and optional strategy code snapshots. This is useful for AI/MCP generated
+        sessions because the session list can then show why a run was created,
+        what hypothesis it tested, and which strategy version it used.
+
+        Parameters:
+            session_id (str): UUID string of the backtest session to update.
+            title (str, optional): Short session title.
+            description (str, optional): Detailed note or markdown summary.
+            strategy_codes (str, optional): JSON object string of strategy code snapshots.
+                Shape: {"Binance Perpetual Futures-BTC-USDT": "strategy code"}
+
+        Returns:
+            dict: Update result with status, session_id, notes fields, and message.
+
+        Example:
+            >>> update_backtest_notes(
+            ...     "550e8400-e29b-41d4-a716-446655440000",
+            ...     title="AI Backtest: breakout filter",
+            ...     description="Tests a stricter trend filter on BTC-USDT 4h."
+            ... )
+        """
+        return await run_blocking(
+            update_backtest_notes_service,
+            session_id=session_id,
+            title=title,
+            description=description,
+            strategy_codes=strategy_codes
+        )
+
+    @mcp.tool()
+    async def get_backtest_session(session_id: str) -> dict:
+        """
+        Retrieve detailed information about a specific backtest session by ID.
+
+        Fetches complete session data from the database including configuration,
+        execution status, performance metrics, trade history, and results.
+        This is the primary method for inspecting backtest state and results.
+        To wait for a running backtest, use wait_for_sessions, not repeated calls to this.
+
+        Parameters:
+            session_id (str): UUID string of the backtest session to retrieve
+                Shape: UUID format string (e.g., "550e8400-e29b-41d4-a716-446655440000")
+
+        Returns:
+            dict: Structured response with consistent format:
+
+            Success Response:
+            {
+                "data": {
+                    "session": {
+                        "id": "uuid-string",
+                        "state": {
+                            "form": {
+                                "exchange": "string",
+                                "routes": [...],
+                                "start_date": "YYYY-MM-DD",
+                                "finish_date": "YYYY-MM-DD",
+                                ...
+                            },
+                            "results": {
+                                "showResults": bool,
+                                "executing": bool,
+                                ...
+                            }
+                        },
+                        "metrics": {
+                            "total_trades": int,
+                            "winning_trades": int,
+                            "losing_trades": int,
+                            "net_profit": float,
+                            "max_drawdown": float,
+                            "sharpe_ratio": float,
+                            ...
+                        },
+                        "trades": [
+                            {
+                                "id": int,
+                                "type": "long|short",
+                                "entry_price": float,
+                                "exit_price": float,
+                                "profit": float,
+                                "entry_time": "datetime",
+                                "exit_time": "datetime",
+                                ...
+                            }
+                        ],
+                        ...
+                    }
+                },
+                "error": null,
+                "message": "Backtest session retrieved successfully"
+            }
+
+            Error Response:
+            {
+                "data": null,
+                "error": "error_description_string",
+                "message": "error_description_string"
+            }
+
+            Shape: {"data": object|null, "error": string|null, "message": string}
+
+        Raises:
+            NotFoundError: If session_id does not exist (returns error in response dict)
+            DatabaseError: If database query fails (returns error in response dict)
+
+        Note:
+            This function always returns a dict with 'data', 'error', and 'message' keys.
+            Check if 'error' is None to determine success/failure.
+
+        Example:
+            >>> session = get_backtest_session("550e8400-e29b-41d4-a716-446655440000")
+            >>> if session["error"] is None:
+            ...     metrics = session["data"]["session"]["metrics"]
+            ...     trades = session["data"]["session"]["trades"]
+            ...     print(f"Total trades: {metrics['total_trades']}")
+            ... else:
+            ...     print(f"Error: {session['error']}")
+        """
+        result = await run_blocking(get_backtest_session_service, session_id)
+
+        # Ensure consistent return structure
+        if result.get('error') is None:
+            # Success case
+            return {
+                'data': result.get('data', {}),
+                'dashboard_url': result.get('dashboard_url', ''),
+                'error': None,
+                'message': result.get('message', 'Session retrieved successfully')
+            }
+        else:
+            # Error case
+            return {
+                'data': None,
+                'dashboard_url': result.get('dashboard_url', ''),
+                'error': result.get('error'),
+                'message': result.get('message', result.get('error', 'Unknown error'))
+            }
+
+    @mcp.tool()
+    async def get_backtest_sessions(
+        limit: int = 50,
+        offset: int = 0,
+        title_search: str = None,
+        status_filter: str = None,
+        date_filter: str = None
+    ) -> dict:
+        """
+        Retrieve a paginated list of backtest sessions with optional filtering.
+
+        Fetches multiple backtest sessions from the database with support for
+        pagination and filtering by various criteria. Sessions are sorted by
+        most recently updated first.
+
+        Parameters:
+            limit (int): Maximum number of sessions to return per page
+                Range: 1-1000, Default: 50
+                Shape: Positive integer
+            offset (int): Number of sessions to skip for pagination (zero-based)
+                Default: 0
+                Shape: Non-negative integer
+            title_search (str, optional): Text search filter for session titles
+                Performs case-insensitive substring matching
+                Shape: String or None
+            status_filter (str, optional): Filter sessions by execution status
+                Valid values: "finished", "running", "cancelled", "pending", "failed"
+                Shape: String or None
+            date_filter (str, optional): Filter sessions by creation/update date
+                Valid values: "today", "this_week", "this_month", "this_year"
+                Shape: String or None
+
+        Returns:
+            dict: Paginated session list with metadata:
+            {
+                "sessions": [
+                    {
+                        "id": "uuid-string",
+                        "title": "string",
+                        "status": "finished|running|cancelled|pending|failed",
+                        "created_at": "datetime-string",
+                        "updated_at": "datetime-string",
+                        "exchange": "string",
+                        "start_date": "YYYY-MM-DD",
+                        "finish_date": "YYYY-MM-DD",
+                        "total_trades": int,
+                        "net_profit": float,
+                        "dashboard_url": "<dashboard origin>/#/backtest/uuid-string",
+                        ...
+                    }
+                ],
+                "total_count": int,  # Total sessions matching filters
+                "limit": int,        # Requested limit
+                "offset": int,       # Requested offset
+                "has_more": bool     # True if more pages available
+            }
+
+            Shape: {
+                "sessions": array[object],
+                "total_count": int,
+                "limit": int,
+                "offset": int,
+                "has_more": bool
+            }
+
+        Raises:
+            ValidationError: If limit/offset parameters are out of valid range
+            DatabaseError: If database query fails
+
+        Pagination Notes:
+            - Use offset + limit for next page (e.g., offset=50 for page 2 with limit=50)
+            - Check 'has_more' to determine if additional pages exist
+            - Maximum limit is 1000 to prevent excessive data transfer
+
+        Example:
+            >>> # Get first 20 finished sessions
+            >>> result = get_backtest_sessions(limit=20, status_filter="finished")
+            >>> sessions = result["sessions"]
+            >>> print(f"Found {len(sessions)} finished sessions")
+
+            >>> # Search for sessions with "BTC" in title
+            >>> btc_sessions = get_backtest_sessions(title_search="BTC", limit=10)
+            >>> print(f"BTC sessions: {len(btc_sessions['sessions'])}")
+        """
+        return await run_blocking(
+            get_backtest_sessions_service,
+            limit=limit,
+            offset=offset,
+            title_search=title_search,
+            status_filter=status_filter,
+            date_filter=date_filter
+        )
+
+    @mcp.tool()
+    async def run_backtest(session_id: str, where: str = 'auto') -> dict:
+        """
+        Trigger a backtest and return immediately.
+
+        Starts the backtest for the given session and returns as soon as Jesse
+        acknowledges the request. Does NOT wait for the backtest to finish.
+        Wait for it with wait_for_sessions([session_id]), then read its results
+        with get_session_results("backtest", session_id).
+
+        Parameters:
+            session_id (str): UUID string of the backtest session to execute
+                Shape: UUID format string (e.g., "550e8400-e29b-41d4-a716-446655440000")
+            where (str): Which machine runs it. "auto" (default): a free research runner when
+                this Jesse has runners turned on, else here; "local": here; "any": queue it for any
+                runner; or a runner name from list_runners. Leave the default unless the user wants a
+                specific machine. A queued run returns status "queued" (with target, job_id, warning?)
+                and shows outcome "queued" in wait_for_sessions until a runner picks it up.
+
+        Returns:
+            dict: Immediate acknowledgement:
+
+            Started Response:
+            {
+                "status": "started",
+                "backtest_id": "uuid-string",
+                "routes": [
+                    {
+                        "exchange": "Binance Perpetual Futures",
+                        "strategy": "MyStrategy",
+                        "symbol": "BTC-USDT",
+                        "timeframe": "4h"
+                    }
+                ],
+                "dashboard_url": "<dashboard origin>/#/backtest/uuid-string",
+                "message": "Backtest started. Call wait_for_sessions([session_id]) to wait until it ends or stalls, then read it with get_session_results."
+            }
+
+            Error Response:
+            {
+                "status": "error",
+                "message": "error description"
+            }
+
+            Shape: {"status": "started|queued|error", "backtest_id": string, "routes": array, "dashboard_url": string, "message": string}
+
+        Raises:
+            NotFoundError: If session_id does not exist
+            ValidationError: If session configuration is invalid
+
+        Workflow:
+            1. create_backtest_draft() → creates session with configuration
+            2. run_backtest(session_id) → fires the backtest, returns immediately
+            3. wait_for_sessions([session_id]) → returns when it ends or stalls
+               (call again with the same IDs while it returns done=false)
+            4. outcome "finished" → read metrics/trades/equity curve with get_session_results
+            5. outcome "ended" → read `error` (or get_session_results' summary); "stalled" →
+               check its logs, then cancel_backtest and run it again
+
+        Waiting:
+            - Never sleep-and-poll get_backtest_session; wait_for_sessions does the waiting
+            - Started several backtests? Pass all their IDs; until="any" returns at the first
+              one that settles so you can start the next
+
+        Example:
+            >>> # Step 1: fire the backtest
+            >>> result = run_backtest("550e8400-e29b-41d4-a716-446655440000")
+            >>> assert result["status"] == "started"
+
+            >>> # Step 2: wait until done
+            >>> waited = wait_for_sessions(["550e8400-e29b-41d4-a716-446655440000"])
+            >>> # repeat the same call while waited["done"] is False
+            >>> session = waited["sessions"][0]
+            >>> if session["outcome"] == "finished":
+            ...     summary = get_session_results("backtest", "550e8400-e29b-41d4-a716-446655440000")
+            ... else:
+            ...     print(session["outcome"], session.get("error") or session.get("note"))
+        """
+        refused = invalid_where(where)
+        if refused:
+            return refused
+        return await run_blocking(gated_run_backtest, session_id, where)
+
+    @mcp.tool()
+    async def export_backtest_report(session_id: str, path: str = None, overwrite: bool = False) -> dict:
+        """
+        Write the PDF report of a finished backtest into the Jesse project.
+
+        Use it only when the user asks for a PDF report. It works on a backtest that ran with
+        export_pdf=True and made at least one trade; any other is refused with error_type
+        "no_report", and running it again with export_pdf=True is what gives it a report.
+
+        The file stays on the Jesse host; only a summary comes back. To get it onto the user's own
+        computer, give them `dashboard_url`: the session's page has a PDF report button.
+
+        Parameters:
+            session_id (str): UUID string of the finished backtest session.
+            path (str, optional): Project-relative .pdf path under research_scripts/ (default
+                research_scripts/backtest_reports/<name>.pdf).
+            overwrite (bool): Replace an existing file. Defaults to False.
+
+        Returns:
+            dict: {"status": "success", "action": "backtest_report_exported", "session_id", "location",
+            "path", "overwritten", "size_bytes", "dashboard_url", "message"} or an error with error_type.
+        """
+        return await run_blocking(export_backtest_report_service, session_id=session_id, path=path, overwrite=overwrite)
+
+    @mcp.tool()
+    async def cancel_backtest(session_id: str) -> dict:
+        """
+        Cancel a currently running backtest process.
+
+        Terminates an executing backtest session using the same endpoint as the dashboard.
+        The backtest process is immediately stopped and the session status is updated
+        to 'cancelled' in the database. Any partial results are preserved.
+
+        Parameters:
+            session_id (str): UUID string of the running backtest session to cancel
+                Shape: UUID format string (e.g., "550e8400-e29b-41d4-a716-446655440000")
+
+        Returns:
+            dict: Cancellation result with status update:
+
+            Success Response:
+            {
+                "success": true,
+                "message": "Backtest cancelled successfully",
+                "session_id": "uuid-string",
+                "status": "cancelled",
+                "cancelled_at": "datetime-string"
+            }
+
+            Error Response:
+            {
+                "success": false,
+                "message": "Error description (e.g., session not found, not running)",
+                "session_id": "uuid-string",
+                "error": "detailed_error_message"
+            }
+
+            Shape: {
+                "success": bool,
+                "message": string,
+                "session_id": string,
+                "status": string|undefined,
+                "cancelled_at": string|undefined,
+                "error": string|undefined
+            }
+
+        Raises:
+            NotFoundError: If session_id does not exist
+            InvalidStateError: If session is not currently running
+            DatabaseError: If cancellation update fails
+
+        Behavior:
+            - Only affects sessions with status "running"
+            - Session status changes to "cancelled"
+            - Partial results (if any) remain accessible via get_backtest_session()
+            - No new trades or metrics are generated after cancellation
+            - Process termination is immediate
+
+        Example:
+            >>> # Cancel a running backtest
+            >>> result = cancel_backtest("550e8400-e29b-41d4-a716-446655440000")
+            >>> if result["success"]:
+            ...     print("Backtest cancelled successfully")
+            ... else:
+            ...     print(f"Cancellation failed: {result['message']}")
+
+        Note:
+            Cancellation is irreversible. Cancelled sessions cannot be resumed.
+        """
+        return await run_blocking(cancel_backtest_service, session_id)
+
+    @mcp.tool()
+    async def purge_backtest_sessions(days_old: int = None) -> dict:
+        """
+        Permanently delete old backtest sessions from the database.
+
+        Removes backtest sessions using the same endpoint as the dashboard.
+        Supports selective deletion by age or complete database cleanup.
+        This operation is irreversible - deleted sessions cannot be recovered.
+
+        Parameters:
+            days_old (int, optional): Age threshold in days for selective deletion
+                - If specified: Only sessions older than this many days are deleted
+                - If None (default): All sessions in database are deleted
+                Range: 1-3650 (1 day to 10 years)
+                Shape: Positive integer or None
+
+        Returns:
+            dict: Deletion result with operation summary:
+
+            Success Response:
+            {
+                "success": true,
+                "message": "Successfully purged X backtest sessions",
+                "deleted_count": int,      # Number of sessions deleted
+                "days_old": int|null,      # Age filter used (null means all deleted)
+                "deleted_sessions": [      # List of deleted session IDs
+                    "uuid-string-1",
+                    "uuid-string-2",
+                    ...
+                ]
+            }
+
+            Error Response:
+            {
+                "success": false,
+                "message": "Error description",
+                "error": "detailed_error_message",
+                "deleted_count": 0
+            }
+
+            Shape: {
+                "success": bool,
+                "message": string,
+                "deleted_count": int,
+                "days_old": int|null,
+                "deleted_sessions": array[string]|undefined,
+                "error": string|undefined
+            }
+
+        Raises:
+            ValidationError: If days_old is outside valid range
+            DatabaseError: If deletion operation fails
+            PermissionError: If user lacks deletion privileges
+
+        Behavior:
+            - Deletes sessions completely from database
+            - Associated data (metrics, trades, configurations) also removed
+            - No backup created - operation is permanent
+            - Affects all sessions matching age criteria (or all if days_old=None)
+
+        Safety Notes:
+            - Use with caution - no undo capability
+            - Consider exporting important results before purging
+            - Test with small days_old values first
+            - Regular purging helps maintain database performance
+
+        Example:
+            >>> # Delete sessions older than 30 days
+            >>> result = purge_backtest_sessions(days_old=30)
+            >>> print(f"Deleted {result['deleted_count']} old sessions")
+
+            >>> # Delete ALL sessions (use with extreme caution)
+            >>> result = purge_backtest_sessions()
+            >>> print(f"Database cleared: {result['deleted_count']} sessions removed")
+
+        Recommendation:
+            Schedule regular purging (e.g., monthly) to maintain database performance
+            while preserving recent results for analysis and comparison.
+        """
+        return await run_blocking(purge_backtest_sessions_service, days_old)

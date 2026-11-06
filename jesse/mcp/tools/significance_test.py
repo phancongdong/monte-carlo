@@ -1,0 +1,333 @@
+"""
+Jesse Rule Significance Test MCP Tools
+
+Mirrors the backtest MCP tool surface so the agent can stage and run rule
+significance tests with the same draft / run / wait workflow it already knows
+(run, then wait_for_sessions, then get_session_results).
+
+Tools exposed:
+    create_significance_test_draft
+    update_significance_test_draft
+    update_significance_test_notes
+    get_significance_test_session
+    get_significance_test_sessions
+    run_significance_test
+    cancel_significance_test
+    purge_significance_test_sessions
+
+The tools are async and run their API calls in a worker thread (see offload.py).
+"""
+
+from .offload import run_blocking
+from .services.runners import invalid_where
+from .services import (
+    create_significance_test_draft_service,
+    update_significance_test_draft_service,
+    update_significance_test_notes_service,
+    get_significance_test_session_service,
+    get_significance_test_sessions_service,
+    run_significance_test_service,
+    cancel_significance_test_service,
+    purge_significance_test_sessions_service,
+)
+from jesse.mcp.usage_limits import gated, CREDIT_WEIGHTS
+from .run_config_arguments import ConfigOverrides
+
+
+def register_significance_test_tools(mcp):
+    """Register all rule-significance-test tools on the MCP server."""
+    # The usage check and the run request happen in one worker-thread call, so a cancellation
+    # never falls between them (a credit used without the run being attempted).
+    gated_run_significance_test = gated(weight=CREDIT_WEIGHTS["run_significance_test"])(run_significance_test_service)
+
+    @mcp.tool()
+    async def create_significance_test_draft(
+        exchange: str = "Binance Perpetual Futures",
+        routes: str = '[{"exchange": "Binance Perpetual Futures", "strategy": "ExampleStrategy", "symbol": "BTC-USDT", "timeframe": "4h"}]',
+        data_routes: str = '[]',
+        start_date: str = "2021-01-01",
+        finish_date: str = "2022-01-01",
+        n_simulations: int = 2000,
+        random_seed: int = None,
+        title: str = None,
+        description: str = None,
+        strategy_summary: str = None,
+        hypothesis: str = None,
+        rationale: str = None,
+        fee: float = None,
+        leverage: int = None,
+        leverage_mode: str = None,
+        balance: float = None,
+        warm_up_candles: int = None,
+        config_overrides: ConfigOverrides = None,
+    ) -> dict:
+        """
+        Create a new Rule Significance Test draft session.
+
+        Rule Significance Testing (RST) statistically proves whether a strategy's
+        entry signal has a genuine edge or is indistinguishable from luck. It runs
+        the real strategy once, then runs `n_simulations` random-entry variants on
+        the same candles and compares the distributions.
+
+        Use this BEFORE writing a full strategy when prototyping an idea, or when
+        the user explicitly asks to "validate an entry signal".
+
+        Constraints:
+            - Exactly ONE trading route is allowed (this is enforced server-side).
+            - The strategy in the route must already exist on disk; create it with
+              create_strategy() first if needed.
+            - 2000+ simulations are recommended for stable p-values.
+
+        Parameters:
+            exchange: Exchange name (default "Binance Perpetual Futures").
+            routes: JSON string array with EXACTLY one route object:
+                [{"exchange": "...", "strategy": "...", "symbol": "...", "timeframe": "..."}]
+            data_routes: JSON string array (default "[]").
+            start_date / finish_date: YYYY-MM-DD.
+            n_simulations: Number of random-entry simulations (default 2000).
+            random_seed: Optional int for reproducibility.
+            title: Optional human-readable note title.
+            description: Optional markdown description; auto-generated if omitted.
+            strategy_summary: One-sentence summary of the strategy.
+            hypothesis: The trading hypothesis being validated.
+            rationale: Why this rule is being significance-tested.
+
+        Run settings (all optional; omitted ones come from the saved significance test defaults for this
+        exchange, else Jesse's built-in defaults):
+            fee: Exchange fee as a fraction per side (0.0006 = 0.06%).
+            leverage: Futures leverage, a whole number of 1 or more. Ignored on spot exchanges.
+            leverage_mode: "cross" or "isolated" (futures only; must be supported by the exchange).
+            balance: Starting balance.
+            warm_up_candles: Candles loaded before the start date to warm up indicators.
+            config_overrides: JSON object with the run-config fields warm_up_candles and exchange,
+                e.g. {"exchange": {"fee": 0.0002, "futures_leverage": 20}}. Named arguments win over it.
+        Set these here instead of editing the draft state afterwards. The response's `run_config` is
+        exactly what the draft will run with, `config_source` says where each value came from
+        (explicit / saved_default / exchange_default / hard_default), and
+        `config_warnings` flags a fee or leverage that is only Jesse's built-in default, saved
+        defaults whose fee or leverage differ from this exchange's backtest defaults, or leverage
+        ignored on a spot exchange. Pass fee and leverage explicitly when a warning appears.
+
+        Returns:
+            {
+              "status": "success",
+              "session_id": "<uuid>",
+              "draft_state": {...},
+              "run_config": {...}, "config_source": {...}, "config_warnings": [...] (when any),
+              "notes": {"title": ..., "description": ..., ...},
+              "message": "..."
+            }
+        """
+        return await run_blocking(
+            create_significance_test_draft_service,
+            exchange=exchange,
+            routes=routes,
+            data_routes=data_routes,
+            start_date=start_date,
+            finish_date=finish_date,
+            n_simulations=n_simulations,
+            random_seed=random_seed,
+            title=title,
+            description=description,
+            strategy_summary=strategy_summary,
+            hypothesis=hypothesis,
+            rationale=rationale,
+            fee=fee,
+            leverage=leverage,
+            leverage_mode=leverage_mode,
+            balance=balance,
+            warm_up_candles=warm_up_candles,
+            config_overrides=config_overrides,
+        )
+
+    @mcp.tool()
+    async def update_significance_test_draft(
+        session_id: str,
+        state: str = None,
+        fee: float = None,
+        leverage: int = None,
+        leverage_mode: str = None,
+        balance: float = None,
+        warm_up_candles: int = None,
+        config_overrides: ConfigOverrides = None,
+    ) -> dict:
+        """
+        Update a Rule Significance Test draft: replace its full state, or change only its run settings.
+
+        Workflow:
+            1. session = get_significance_test_session(session_id)
+            2. current_state = session["data"]["session"]["state"]
+            3. modify current_state.form as needed
+            4. update_significance_test_draft(session_id, json.dumps(current_state))
+
+        Parameters:
+            session_id: Draft session UUID.
+            state: JSON string of the complete state object (form + results).
+
+        To change only run settings, omit `state` and pass any of fee, leverage, leverage_mode,
+        balance, warm_up_candles or config_overrides (same meaning as in the create tool). The
+        stored draft keeps everything else; only drafts can change. The response shows the new
+        `run_config` and `config_source` ("explicit" for what this call set, "stored" for the rest).
+        Do not combine `state` with run settings.
+
+        Returns:
+            { "status": "success", "session_id": ..., "draft_state": ..., "message": ... }
+        """
+        return await run_blocking(
+            update_significance_test_draft_service, session_id, state,
+            fee=fee, leverage=leverage, leverage_mode=leverage_mode, balance=balance,
+            warm_up_candles=warm_up_candles, config_overrides=config_overrides,
+        )
+
+    @mcp.tool()
+    async def update_significance_test_notes(
+        session_id: str,
+        title: str = None,
+        description: str = None,
+        strategy_codes: str = None,
+    ) -> dict:
+        """
+        Update title / description / strategy code snapshot on an existing session.
+
+        Use this after a test finishes to record the conclusion (e.g. "p_value=0.03,
+        edge confirmed — proceeding to full strategy").
+
+        Parameters:
+            session_id: Session UUID.
+            title: Short title shown in the sessions list.
+            description: Markdown notes / conclusion.
+            strategy_codes: Optional JSON object string of strategy code snapshots,
+                keyed by "<exchange>-<symbol>".
+
+        Returns:
+            { "status": "success"|"error", "session_id": ..., ... }
+        """
+        return await run_blocking(
+            update_significance_test_notes_service,
+            session_id=session_id,
+            title=title,
+            description=description,
+            strategy_codes=strategy_codes,
+        )
+
+    @mcp.tool()
+    async def get_significance_test_session(session_id: str) -> dict:
+        """
+        Fetch full details of a significance test session.
+
+        Returns:
+            {
+              "data": {
+                "session": {
+                  "id": "<uuid>",
+                  "status": "draft|running|finished|stopped|terminated",
+                  "state": {"form": {...}, "results": {...}},
+                  "results": {                  # populated when finished
+                    "observed_mean": float,
+                    "annualized_return": float,
+                    "p_value": float,           # < 0.05 = statistically significant
+                    "n_simulations": int,
+                    "n_observations": int
+                  },
+                  "exception": str | null,
+                  "traceback": str | null
+                }
+              },
+              "error": null | str,
+              "message": str
+            }
+        """
+        result = await run_blocking(get_significance_test_session_service, session_id)
+        if result.get('error') is None:
+            return {
+                'data': result.get('data', {}),
+                'dashboard_url': result.get('dashboard_url', ''),
+                'error': None,
+                'message': result.get('message', 'Session retrieved successfully'),
+            }
+        return {
+            'data': None,
+            'dashboard_url': result.get('dashboard_url', ''),
+            'error': result.get('error'),
+            'message': result.get('message', result.get('error', 'Unknown error')),
+        }
+
+    @mcp.tool()
+    async def get_significance_test_sessions(
+        limit: int = 50,
+        offset: int = 0,
+        title_search: str = None,
+        status_filter: str = None,
+        date_filter: str = None,
+    ) -> dict:
+        """
+        List significance test sessions (most recent first).
+
+        Parameters:
+            limit: Max sessions to return (default 50).
+            offset: Pagination offset (default 0).
+            title_search: Case-insensitive substring on title.
+            status_filter: One of "draft", "running", "finished", "stopped", "terminated".
+            date_filter: One of "7_days", "30_days", "90_days".
+
+        Returns:
+            { "status": "success", "sessions": [...], "count": int, "message": ... }
+            Each session row has "dashboard_url", its page on the dashboard: give the user
+            that link, not the bare ID.
+        """
+        return await run_blocking(
+            get_significance_test_sessions_service,
+            limit=limit,
+            offset=offset,
+            title_search=title_search,
+            status_filter=status_filter,
+            date_filter=date_filter,
+        )
+
+    @mcp.tool()
+    async def run_significance_test(session_id: str, where: str = 'auto') -> dict:
+        """
+        Fire a Rule Significance Test for a previously created draft and return immediately.
+
+        This returns once the server acknowledges (202). Then call
+        wait_for_sessions([session_id]) until it ends or stalls (call again while it
+        returns done=false), and read the results with
+        get_session_results("significance_test", session_id).
+
+        Parameters:
+            where (str): Which machine runs it. "auto" (default): a free research runner when
+                this Jesse has runners turned on, else here; "local": here; "any": queue it for any
+                runner; or a runner name from list_runners. Leave the default unless the user wants a
+                specific machine. A queued run returns status "queued" (with target, job_id, warning?)
+                and shows outcome "queued" in wait_for_sessions until a runner picks it up.
+
+        Returns:
+            { "status": "started" | "queued", "session_id": "<uuid>", "message": "..." }
+            or { "status": "error", "message": "..." }
+
+        Interpreting results:
+            - p_value < 0.05         → entry signal has a statistically significant edge
+            - 0.05 <= p_value <= 0.10 → borderline; flag as inconclusive to the user
+            - p_value > 0.10         → HARD STOP. Indistinguishable from random;
+              do not silently proceed to a full backtest
+        """
+        refused = invalid_where(where)
+        if refused:
+            return refused
+        return await run_blocking(gated_run_significance_test, session_id, where)
+
+    @mcp.tool()
+    async def cancel_significance_test(session_id: str) -> dict:
+        """Cancel a running significance test."""
+        return await run_blocking(cancel_significance_test_service, session_id)
+
+    @mcp.tool()
+    async def purge_significance_test_sessions(days_old: int = None) -> dict:
+        """
+        Permanently delete significance test sessions.
+
+        Parameters:
+            days_old: If set, only sessions older than this many days are deleted.
+                If None, ALL sessions are deleted (irreversible).
+        """
+        return await run_blocking(purge_significance_test_sessions_service, days_old)
