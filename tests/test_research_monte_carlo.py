@@ -6,13 +6,13 @@ import numpy as np
 import pytest
 import ray
 
-from jesse import research
-from jesse.candle_pipelines import MovingBlockBootstrapCandlesPipeline
-from jesse.config import config
-from jesse.factories import candles_from_close_prices
-import jesse.helpers as jh
-from jesse.routes import router
-from jesse.store import store
+from montecarlo import research
+from montecarlo.candle_pipelines import MovingBlockBootstrapCandlesPipeline
+from montecarlo.config import config
+from montecarlo.factories import candles_from_close_prices
+import montecarlo.helpers as jh
+from montecarlo.routes import router
+from montecarlo.store import store
 
 
 def _monte_carlo_inputs(strategy: str = 'TestOptimizationIsolation') -> tuple[dict, list, dict]:
@@ -73,7 +73,7 @@ def _assert_research_runtime_is_clean(ray_was_initialized: bool) -> None:
     assert config['app']['trading_mode'] == ''
     assert router.routes == []
     assert router.data_routes == []
-    api_module = sys.modules.get('jesse.services.api')
+    api_module = sys.modules.get('montecarlo.services.api')
     if api_module is not None:
         assert api_module.api.drivers == {}
     assert store.vars == {}
@@ -277,8 +277,8 @@ def test_candle_monte_carlo_cleans_up_after_original_backtest_failure() -> None:
 
 
 _SIMULATION_ENTRY_POINTS = [
-    ('jesse.research.monte_carlo.monte_carlo_trades', 'monte_carlo_trades', '_run_monte_carlo_simulation'),
-    ('jesse.research.monte_carlo.monte_carlo_candles', 'monte_carlo_candles', '_run_monte_carlo_candles_simulation'),
+    ('montecarlo.research.monte_carlo.monte_carlo_trades', 'monte_carlo_trades', '_run_monte_carlo_simulation'),
+    ('montecarlo.research.monte_carlo.monte_carlo_candles', 'monte_carlo_candles', '_run_monte_carlo_candles_simulation'),
 ]
 
 
@@ -292,7 +292,7 @@ def _fake_ray_lifecycle(monkeypatch, module, simulation, *, initialized: bool) -
         state['initialized'] = True
 
     def unexpected_raw_init(**kwargs):
-        raise AssertionError('Ray must be started through jesse.services.ray_runtime')
+        raise AssertionError('Ray must be started through montecarlo.services.ray_runtime')
 
     monkeypatch.setattr(module, 'cpu_count', lambda: 8)
     monkeypatch.setattr(module, 'initialize_ray', start)

@@ -7,19 +7,19 @@ from types import SimpleNamespace
 import peewee
 import pytest
 
-from jesse.controllers import monte_carlo_controller, optimization_controller
-from jesse.models.BacktestSession import BacktestSession, get_backtest_session_by_id, get_backtest_sessions
-from jesse.models.MonteCarloSession import MonteCarloCandlesSession, MonteCarloSession, MonteCarloTradesSession
-from jesse.models.OptimizationSession import (
+from montecarlo.controllers import monte_carlo_controller, optimization_controller
+from montecarlo.models.BacktestSession import BacktestSession, get_backtest_session_by_id, get_backtest_sessions
+from montecarlo.models.MonteCarloSession import MonteCarloCandlesSession, MonteCarloSession, MonteCarloTradesSession
+from montecarlo.models.OptimizationSession import (
     OptimizationSession,
     get_optimization_session_by_id,
     get_running_optimization_session_id,
 )
-from jesse.models.SignificanceTestSession import SignificanceTestSession
-from jesse.services import redis as coordinator
-from jesse.services import session_liveness
-from jesse.services.multiprocessing import ProcessManager
-from jesse.services.web import MonteCarloRequestJson, OptimizationRequestJson
+from montecarlo.models.SignificanceTestSession import SignificanceTestSession
+from montecarlo.services import redis as coordinator
+from montecarlo.services import session_liveness
+from montecarlo.services.multiprocessing import ProcessManager
+from montecarlo.services.web import MonteCarloRequestJson, OptimizationRequestJson
 
 HERE = 'this-host:9000'
 OTHER = 'other-host:9005'

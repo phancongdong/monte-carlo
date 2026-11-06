@@ -1,6 +1,6 @@
 """
 Every MCP tool except three pure in-memory ones is async and runs its blocking work (Jesse
-API calls, local file reads, usage metering) in a worker thread (jesse/mcp/tools/offload.py);
+API calls, local file reads, usage metering) in a worker thread (montecarlo/mcp/tools/offload.py);
 a few Jesse routes that are unsafe to overlap are serialized (services/locks.py).
 
 The real MCP worker (FastMCP, Streamable HTTP, token auth) runs under uvicorn on an
@@ -43,11 +43,11 @@ from mcp.server.fastmcp.exceptions import ToolError
 from mcp.server.fastmcp.tools.base import Tool
 from mcp.types import LATEST_PROTOCOL_VERSION, ImageContent, TextContent
 
-import jesse.mcp.server as mcp_server
-import jesse.mcp.tools.services.config as config_service
-import jesse.mcp.tools.services.project_files as project_files_service
-import jesse.mcp.usage_limits as usage_limits
-from jesse.controllers import (
+import montecarlo.mcp.server as mcp_server
+import montecarlo.mcp.tools.services.config as config_service
+import montecarlo.mcp.tools.services.project_files as project_files_service
+import montecarlo.mcp.usage_limits as usage_limits
+from montecarlo.controllers import (
     analysis_controller,
     config_controller,
     data_provider_credentials_controller,
@@ -56,10 +56,10 @@ from jesse.controllers import (
     research_scripts_controller,
     strategy_controller,
 )
-from jesse.mcp.auth import dashboard_token
+from montecarlo.mcp.auth import dashboard_token
 from tests.conftest import process_exited
-from jesse.mcp.tools import offload
-from jesse.mcp.tools.services import (
+from montecarlo.mcp.tools import offload
+from montecarlo.mcp.tools.services import (
     create_strategy_service,
     get_analysis_artifact_service,
     get_backtest_config_service,
@@ -75,12 +75,12 @@ from jesse.mcp.tools.services import (
     write_project_file_service,
     write_strategy_service,
 )
-from jesse.mcp.tools.services.session_config import resolve_session_run_config
-from jesse.models.DataProviderCredentials import DataProviderCredentials
-from jesse.models.ExchangeApiKeys import ExchangeApiKeys
-from jesse.models.Option import Option
-from jesse.modes import data_provider
-from jesse.services import analysis_jobs, auth, research_jobs
+from montecarlo.mcp.tools.services.session_config import resolve_session_run_config
+from montecarlo.models.DataProviderCredentials import DataProviderCredentials
+from montecarlo.models.ExchangeApiKeys import ExchangeApiKeys
+from montecarlo.models.Option import Option
+from montecarlo.modes import data_provider
+from montecarlo.services import analysis_jobs, auth, research_jobs
 
 PASSWORD = 'offloading-test-password'
 MCP_HEADERS = {'Authorization': f'Bearer {dashboard_token(PASSWORD)}', 'Accept': 'application/json, text/event-stream'}
@@ -156,7 +156,7 @@ class _Gate:
         return self.request('POST', url, json=json, headers=headers, timeout=timeout)
 
     def request(self, method, url, params=None, json=None, headers=None, timeout=None):
-        route = url.removeprefix('http://jesse.test')
+        route = url.removeprefix('http://montecarlo.test')
         with self.lock:
             self.thread_ids.add(threading.get_ident())
             self.started.append(route)
@@ -307,7 +307,7 @@ async def _wait_for(condition: Callable[[], bool], seconds: float = WAIT_SECONDS
 
 
 def _log_messages(caplog) -> list:
-    return [record.getMessage() for record in caplog.records if record.name == 'jesse.mcp.tools']
+    return [record.getMessage() for record in caplog.records if record.name == 'montecarlo.mcp.tools']
 
 
 def _session_crashes(caplog) -> list:
@@ -384,7 +384,7 @@ def api(tmp_path, monkeypatch, recorded) -> TestClient:
     """
     monkeypatch.setitem(auth.ENV_VALUES, 'PASSWORD', PASSWORD)
     # SQLite keeps datetimes as text that peewee cannot parse back when they carry a zone.
-    monkeypatch.setattr('jesse.helpers.now_to_datetime', lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    monkeypatch.setattr('montecarlo.helpers.now_to_datetime', lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     app = FastAPI()
 
     @app.exception_handler(auth.InvalidAuthError)
@@ -410,7 +410,7 @@ def api(tmp_path, monkeypatch, recorded) -> TestClient:
 @pytest.fixture
 def gate(api, monkeypatch) -> _Gate:
     forwarder = _Gate(api)
-    monkeypatch.setattr(project_files_service.mcp_config, 'JESSE_API_URL', 'http://jesse.test')
+    monkeypatch.setattr(project_files_service.mcp_config, 'JESSE_API_URL', 'http://montecarlo.test')
     monkeypatch.setattr(project_files_service.mcp_config, 'JESSE_PASSWORD', PASSWORD)
     monkeypatch.setattr(requests, 'post', forwarder.post)
     monkeypatch.setattr(requests, 'request', forwarder.request)
@@ -526,7 +526,7 @@ def test_run_blocking_never_starts_a_call_that_was_cancelled_first():
 
 
 def test_run_blocking_finishes_a_started_call_before_honoring_cancellation(caplog):
-    caplog.set_level(logging.INFO, logger='jesse.mcp.tools')
+    caplog.set_level(logging.INFO, logger='montecarlo.mcp.tools')
     started, release = threading.Event(), threading.Event()
     finished = []
 
@@ -575,7 +575,7 @@ def test_run_blocking_finishes_a_started_call_before_honoring_cancellation(caplo
 
 
 def test_run_blocking_raises_the_cancellation_when_a_cancelled_call_fails(caplog):
-    caplog.set_level(logging.INFO, logger='jesse.mcp.tools')
+    caplog.set_level(logging.INFO, logger='montecarlo.mcp.tools')
     started, release = threading.Event(), threading.Event()
 
     def copy_project_path_service():
@@ -642,13 +642,13 @@ def test_run_blocking_is_bounded_by_the_default_thread_limiter():
 
 
 def test_run_blocking_does_not_log_normal_calls(caplog):
-    caplog.set_level(logging.INFO, logger='jesse.mcp.tools')
+    caplog.set_level(logging.INFO, logger='montecarlo.mcp.tools')
     assert anyio.run(offload.run_blocking, dict) == {}
     assert _log_messages(caplog) == []
 
 
 def test_run_blocking_passes_keyword_arguments_and_logs_only_the_service_name_and_status(caplog):
-    caplog.set_level(logging.INFO, logger='jesse.mcp.tools')
+    caplog.set_level(logging.INFO, logger='montecarlo.mcp.tools')
     started, release = threading.Event(), threading.Event()
 
     def store_exchange_api_key_service(exchange, name=None, api_key=None):
@@ -696,7 +696,7 @@ def _raw_tools() -> dict:
         def resource(self, _uri):
             return lambda func: func
 
-    from jesse.mcp.tools import register_tools
+    from montecarlo.mcp.tools import register_tools
     register_tools(Registrar())
     return registered
 
@@ -805,7 +805,7 @@ def test_results_errors_and_images_match_the_services(project, gate, worker):
 
 
 def test_a_cancelled_mutation_completes_is_logged_and_the_session_stays_usable(project, gate, worker, caplog):
-    caplog.set_level(logging.INFO, logger='jesse.mcp.tools')
+    caplog.set_level(logging.INFO, logger='montecarlo.mcp.tools')
     gate.hold = {'/project-files/write'}
     target = project / 'strategies' / 'MyStrategy' / 'features.py'
 
@@ -850,7 +850,7 @@ def test_a_cancelled_mutation_completes_is_logged_and_the_session_stays_usable(p
 
 
 def test_a_cancelled_job_start_leaves_a_tracked_job_that_only_an_explicit_cancel_stops(project, gate, worker, caplog):
-    caplog.set_level(logging.INFO, logger='jesse.mcp.tools')
+    caplog.set_level(logging.INFO, logger='montecarlo.mcp.tools')
     gate.hold = {'/research-scripts/run'}
 
     async def scenario():
@@ -1322,7 +1322,7 @@ def test_overlapping_strategy_creation_of_this_worker_runs_one_at_a_time(project
 
 
 def test_a_cancelled_create_strategy_still_completes_both_steps(project, gate, worker, caplog):
-    caplog.set_level(logging.INFO, logger='jesse.mcp.tools')
+    caplog.set_level(logging.INFO, logger='montecarlo.mcp.tools')
     gate.hold = {'/strategy/save'}
     target = project / 'strategies' / 'Cancelled' / '__init__.py'
     code = 'class Cancelled:\n    pass\n'
@@ -1362,7 +1362,7 @@ def test_a_cancelled_create_strategy_still_completes_both_steps(project, gate, w
 
 
 def test_a_cancelled_metered_run_is_metered_and_started_once_and_the_session_survives(project, gate, meter, worker, recorded, caplog):
-    caplog.set_level(logging.INFO, logger='jesse.mcp.tools')
+    caplog.set_level(logging.INFO, logger='montecarlo.mcp.tools')
     _seed_config(BASE_SETTINGS)
     meter.hold = True
 

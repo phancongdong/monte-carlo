@@ -13,17 +13,17 @@ from starlette.responses import PlainTextResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
-import jesse.mcp.manager as manager
-import jesse.mcp.mcp_config as mcp_config
-import jesse.mcp.server as mcp_server
-from jesse.mcp.auth import (
+import montecarlo.mcp.manager as manager
+import montecarlo.mcp.mcp_config as mcp_config
+import montecarlo.mcp.server as mcp_server
+from montecarlo.mcp.auth import (
     McpTokenAuthMiddleware,
     dashboard_token,
     is_authorized,
     token_from_authorization,
 )
-from jesse.services.auth import password_to_token
-from jesse.services.env import ENV_VALUES
+from montecarlo.services.auth import password_to_token
+from montecarlo.services.env import ENV_VALUES
 
 PASSWORD = 'unit-test-password'
 TOKEN = dashboard_token(PASSWORD)
@@ -155,13 +155,13 @@ def test_middleware_passes_lifespan_through():
 )
 def test_build_worker_launch_keeps_password_out_of_argv(listen_fd, handoff_args):
     argv, env = manager.build_worker_launch(
-        'http://127.0.0.1:9000', 'https://jesse.example.com', PASSWORD, listen_fd, base_env={'PATH': '/bin'},
+        'http://127.0.0.1:9000', 'https://montecarlo.example.com', PASSWORD, listen_fd, base_env={'PATH': '/bin'},
     )
 
     assert argv == [
-        sys.executable, '-m', 'jesse.mcp.server',
+        sys.executable, '-m', 'montecarlo.mcp.server',
         '--api_url', 'http://127.0.0.1:9000',
-        '--dashboard_url', 'https://jesse.example.com',
+        '--dashboard_url', 'https://montecarlo.example.com',
         *handoff_args,
     ]
     assert all(PASSWORD not in arg and TOKEN not in arg for arg in argv)
@@ -183,7 +183,7 @@ class _FakeProcess:
         return None
 
     def wait(self, timeout=None):
-        raise subprocess.TimeoutExpired('jesse.mcp.server', timeout)
+        raise subprocess.TimeoutExpired('montecarlo.mcp.server', timeout)
 
     def terminate(self):
         pass
@@ -219,7 +219,7 @@ def isolated_manager(monkeypatch):
     [('0.0.0.0', 'http://127.0.0.1:9000'), ('::', 'http://[::1]:9000'), ('192.168.1.20', 'http://192.168.1.20:9000')],
 )
 def test_run_mcp_server_launches_loopback_worker_with_public_url(isolated_manager, capsys, bind_host, api_url):
-    manager.run_mcp_server(bind_host, 9000, 'https://jesse.example.com')
+    manager.run_mcp_server(bind_host, 9000, 'https://montecarlo.example.com')
 
     [(argv, kwargs)] = isolated_manager
     if sys.platform == 'win32':
@@ -232,7 +232,7 @@ def test_run_mcp_server_launches_loopback_worker_with_public_url(isolated_manage
         assert kwargs.get('close_fds', True) is True
     assert '--port' not in argv
     assert argv[argv.index('--api_url') + 1] == api_url
-    assert argv[argv.index('--dashboard_url') + 1] == 'https://jesse.example.com'
+    assert argv[argv.index('--dashboard_url') + 1] == 'https://montecarlo.example.com'
     assert '--password' not in argv
     assert all(PASSWORD not in arg for arg in argv)
     assert kwargs['shell'] is False
@@ -253,11 +253,11 @@ def test_run_mcp_server_launches_loopback_worker_with_public_url(isolated_manage
             os.fstat(listen_fd)
 
     assert mcp_config.JESSE_API_URL == api_url
-    assert mcp_config.MCP_URL == 'https://jesse.example.com/mcp'
-    assert mcp_config.DASHBOARD_URL == 'https://jesse.example.com'
+    assert mcp_config.MCP_URL == 'https://montecarlo.example.com/mcp'
+    assert mcp_config.DASHBOARD_URL == 'https://montecarlo.example.com'
 
     output = capsys.readouterr().out
-    assert 'https://jesse.example.com/mcp' in output
+    assert 'https://montecarlo.example.com/mcp' in output
     # The internal port is never presented as an endpoint.
     assert str(worker.port) not in output
     assert 'MCP_PORT' not in output
@@ -387,8 +387,8 @@ def test_worker_main_serves_authenticated_app_on_handed_over_socket(monkeypatch,
     assert mcp_config.JESSE_API_URL == 'http://127.0.0.1:9000'
     assert mcp_config.JESSE_PASSWORD == PASSWORD
     assert mcp_config.MCP_WORKER_PORT == isolated_worker_main.port
-    assert mcp_config.DASHBOARD_URL == 'https://jesse.example.com'
-    assert mcp_config.MCP_URL == 'https://jesse.example.com/mcp'
+    assert mcp_config.DASHBOARD_URL == 'https://montecarlo.example.com'
+    assert mcp_config.MCP_URL == 'https://montecarlo.example.com/mcp'
 
 
 def test_worker_main_exits_without_password(monkeypatch, isolated_worker_main):

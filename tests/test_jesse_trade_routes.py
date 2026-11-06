@@ -26,9 +26,9 @@ import uvicorn
 from fastapi import FastAPI
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from jesse.controllers import auth_controller, strategy_controller
-from jesse.services import auth
-from jesse.services import strategy_handler
+from montecarlo.controllers import auth_controller, strategy_controller
+from montecarlo.services import auth
+from montecarlo.services import strategy_handler
 
 PASSWORD = 'jesse-trade-routes-password'
 DASHBOARD_AUTH = {'Authorization': sha256(PASSWORD.encode('utf-8')).hexdigest()}
@@ -49,7 +49,7 @@ WAIT_SECONDS = 15
 
 
 def _code(class_name: str, marker: str = '') -> str:
-    return f'from jesse.strategies import Strategy\n\n\nclass {class_name}(Strategy):\n    pass  # {marker}\n'
+    return f'from montecarlo.strategies import Strategy\n\n\nclass {class_name}(Strategy):\n    pass  # {marker}\n'
 
 
 class _JesseTrade:
@@ -143,7 +143,7 @@ class _Jesse:
     def __init__(self) -> None:
         app = FastAPI()
 
-        # The same handler jesse/__init__.py registers on the real app: a failed dashboard
+        # The same handler montecarlo/__init__.py registers on the real app: a failed dashboard
         # authentication becomes this 401 response.
         @app.exception_handler(auth.InvalidAuthError)
         async def invalid_auth_handler(_request, _exc):
@@ -254,7 +254,7 @@ FORWARDS_TOKEN = {'index', 'strategy', 'metrics', 'import'}
 def _call(jesse: _Jesse, route: str, jesse_trade_token: Optional[str] = SESSION_TOKEN, **overrides) -> requests.Response:
     method, path, kwargs = ROUTES[route]['call']
     headers = {'X-Jesse-Trade-Token': jesse_trade_token} if jesse_trade_token else {}
-    return jesse.request(method, path, headers={**headers, **overrides.pop('headers', {})}, **{**kwargs, **overrides})
+    return montecarlo.request(method, path, headers={**headers, **overrides.pop('headers', {})}, **{**kwargs, **overrides})
 
 
 def _expected_success(route: str) -> dict:
@@ -341,7 +341,7 @@ def test_dashboard_authentication_is_still_required(jesse, jesse_trade, project,
     if authorization:
         headers['Authorization'] = authorization
 
-    response = requests.request(method, jesse.url + path, headers=headers, timeout=WAIT_SECONDS, **kwargs)
+    response = requests.request(method, montecarlo.url + path, headers=headers, timeout=WAIT_SECONDS, **kwargs)
 
     assert (response.status_code, response.json()) == (401, {'message': 'Invalid password'})
     assert jesse_trade.requests == []
@@ -410,9 +410,9 @@ def test_a_slow_jesse_trade_does_not_hold_up_other_requests(jesse, jesse_trade, 
     try:
         jesse_trade.wait_for(1)
         started = time.monotonic()
-        probe = requests.get(f'{jesse.url}/probe', timeout=WAIT_SECONDS)
+        probe = requests.get(f'{montecarlo.url}/probe', timeout=WAIT_SECONDS)
         probe_seconds = time.monotonic() - started
-        other = jesse.request('GET', '/strategy/all')
+        other = montecarlo.request('GET', '/strategy/all')
         other_seconds = time.monotonic() - started
         still_waiting = held.is_alive()
     finally:

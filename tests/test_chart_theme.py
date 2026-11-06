@@ -6,10 +6,10 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from jesse.controllers import backtest_controller, significance_test_controller
-from jesse.models.Option import Option
-from jesse.modes import data_provider
-from jesse.services import auth
+from montecarlo.controllers import backtest_controller, significance_test_controller
+from montecarlo.models.Option import Option
+from montecarlo.modes import data_provider
+from montecarlo.services import auth
 
 
 PASSWORD = 'chart-theme-password'

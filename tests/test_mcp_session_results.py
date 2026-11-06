@@ -17,10 +17,10 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-import jesse.mcp.tools.services.project_files as project_files_service
-from jesse.controllers import session_results_controller
-from jesse.mcp.tools import register_tools
-from jesse.services import auth, session_results
+import montecarlo.mcp.tools.services.project_files as project_files_service
+from montecarlo.controllers import session_results_controller
+from montecarlo.mcp.tools import register_tools
+from montecarlo.services import auth, session_results
 from tests.mcp_tool_adapters import callable_tool
 
 
@@ -517,8 +517,8 @@ def test_redaction_ignores_short_values_and_replaces_longest_first():
 
 
 def test_live_secret_lookup_covers_nested_fields_and_malformed_json(monkeypatch):
-    from jesse.models.ExchangeApiKeys import ExchangeApiKeys
-    from jesse.models.NotificationApiKeys import NotificationApiKeys
+    from montecarlo.models.ExchangeApiKeys import ExchangeApiKeys
+    from montecarlo.models.NotificationApiKeys import NotificationApiKeys
     key_id = '66666666-6666-4666-8666-666666666666'
     exchange = SimpleNamespace(api_key=API_KEY, api_secret=API_SECRET, additional_fields='{not json')
     notification = SimpleNamespace(fields=json.dumps({'bot_token': 'bot-token-123456', 'targets': [{'chat_id': 987654321}]}))
@@ -555,9 +555,9 @@ def test_live_reads_fail_closed_when_saved_keys_cannot_be_read(api, live, monkey
 @pytest.fixture
 def tools(api, monkeypatch):
     def forward_post(url, json=None, headers=None, timeout=None):
-        return api.post(url.removeprefix('http://jesse.test'), json=json, headers=headers)
+        return api.post(url.removeprefix('http://montecarlo.test'), json=json, headers=headers)
 
-    monkeypatch.setattr(project_files_service.mcp_config, 'JESSE_API_URL', 'http://jesse.test')
+    monkeypatch.setattr(project_files_service.mcp_config, 'JESSE_API_URL', 'http://montecarlo.test')
     monkeypatch.setattr(project_files_service.mcp_config, 'JESSE_PASSWORD', PASSWORD)
     monkeypatch.setattr(project_files_service.requests, 'post', forward_post)
     mcp = FakeMCP()

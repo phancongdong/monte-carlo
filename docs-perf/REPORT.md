@@ -4,7 +4,7 @@
 which is the already-merged dashboard rebuild, PR #587) and `perf-backtests` in
 `jesse-rust` (5 commits on top of `main`).
 **Benchmarked on:** Raspberry Pi 5 (aarch64, Cortex-A76), Python 3.12.13, numpy 1.26.4.
-Bench harness, scenarios and all result JSONs live in `/home/user/dev-jesse/jesse-bench/`
+Bench harness, scenarios and all result JSONs live in `/home/user/dev-montecarlo/jesse-bench/`
 (see its `ANALYSIS.md` for the full night-by-night writeup).
 
 ---
@@ -75,7 +75,7 @@ Nothing here is "looks the same"; everything is **bit-for-bit**:
    timestamps / warmup continuity) and **fall back to the original code path** when any
    guard fails.
 5. **Real-strategy regression tests** (`tests/test_real_strategy_regression.py`): three
-   pytest tests run full `jesse.research.backtest()` sessions with *real* strategies
+   pytest tests run full `montecarlo.research.backtest()` sessions with *real* strategies
    adapted from the maintainer's bot project. The first two assert the complete result
    fingerprint (bench-style: key metrics @ 6 decimals + per-trade sha256) against
    values captured from **master @ `0987c304`** (pre-optimization):

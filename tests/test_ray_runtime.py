@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from jesse.services import ray_runtime
+from montecarlo.services import ray_runtime
 
 
 def test_normal_memory_keeps_ray_default_proportion(monkeypatch):

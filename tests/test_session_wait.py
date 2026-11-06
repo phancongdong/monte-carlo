@@ -7,15 +7,15 @@ from types import SimpleNamespace
 import peewee
 import pytest
 
-from jesse.controllers import session_results_controller
-from jesse.mcp.tools.services import session_wait
-from jesse.models.BacktestSession import BacktestSession
-from jesse.models.MonteCarloSession import MonteCarloCandlesSession, MonteCarloSession, MonteCarloTradesSession
-from jesse.models.OptimizationSession import OptimizationSession
-from jesse.models.SignificanceTestSession import SignificanceTestSession
-from jesse.services import redis as coordinator
-from jesse.services import session_liveness, session_status
-from jesse.services.web import SessionStatusRequestJson
+from montecarlo.controllers import session_results_controller
+from montecarlo.mcp.tools.services import session_wait
+from montecarlo.models.BacktestSession import BacktestSession
+from montecarlo.models.MonteCarloSession import MonteCarloCandlesSession, MonteCarloSession, MonteCarloTradesSession
+from montecarlo.models.OptimizationSession import OptimizationSession
+from montecarlo.models.SignificanceTestSession import SignificanceTestSession
+from montecarlo.services import redis as coordinator
+from montecarlo.services import session_liveness, session_status
+from montecarlo.services.web import SessionStatusRequestJson
 
 HERE = 'this-host:9000'
 MODELS = [BacktestSession, OptimizationSession, MonteCarloSession, MonteCarloTradesSession,
@@ -147,7 +147,7 @@ def _ok(*sessions):
 
 
 def test_waits_until_every_session_ends(jesse):
-    jesse.reads = [
+    montecarlo.reads = [
         _ok(_session('a'), _session('b')),
         _ok(_session('a', 'finished'), _session('b')),
         _ok(_session('a', 'finished'), _session('b', 'stopped', error='InvalidStrategy: no sell')),
@@ -155,23 +155,23 @@ def test_waits_until_every_session_ends(jesse):
 
     result = session_wait.wait_for_sessions_service(['a', 'b'])
 
-    assert result['done'] is True and jesse.calls == 3
+    assert result['done'] is True and montecarlo.calls == 3
     assert result['outcomes'] == {'finished': 1, 'ended': 1}
     assert result['sessions'][1]['error'] == 'InvalidStrategy: no sell'
     assert 'next' not in result
 
 
 def test_until_any_returns_at_the_first_settled_session(jesse):
-    jesse.reads = [_ok(_session('a'), _session('b')), _ok(_session('a'), _session('b', 'finished'))]
+    montecarlo.reads = [_ok(_session('a'), _session('b')), _ok(_session('a'), _session('b', 'finished'))]
 
     result = session_wait.wait_for_sessions_service('["a", "b"]', until='any')
 
-    assert result['done'] is True and jesse.calls == 2
+    assert result['done'] is True and montecarlo.calls == 2
     assert [s['outcome'] for s in result['sessions']] == ['running', 'finished']
 
 
 def test_a_silent_running_session_counts_as_stalled(jesse):
-    jesse.reads = [_ok(_session('opt', kind='optimization', progress_age=31 * 60, claimed_by='mini:9005', claimed_here=False))]
+    montecarlo.reads = [_ok(_session('opt', kind='optimization', progress_age=31 * 60, claimed_by='mini:9005', claimed_here=False))]
 
     result = session_wait.wait_for_sessions_service(['opt'])
 
@@ -182,14 +182,14 @@ def test_a_silent_running_session_counts_as_stalled(jesse):
 
 
 def test_stall_minutes_overrides_the_default(jesse):
-    jesse.reads = [_ok(_session('bt', progress_age=3 * 60))]
+    montecarlo.reads = [_ok(_session('bt', progress_age=3 * 60))]
 
     assert session_wait.wait_for_sessions_service(['bt'], stall_minutes=2)['sessions'][0]['outcome'] == 'stalled'
     assert session_wait.wait_for_sessions_service(['bt'], timeout_seconds=0)['sessions'][0]['outcome'] == 'running'
 
 
 def test_a_session_without_heartbeats_is_never_called_stalled(jesse):
-    jesse.reads = [_ok(_session('old', progress_age=None))]
+    montecarlo.reads = [_ok(_session('old', progress_age=None))]
 
     result = session_wait.wait_for_sessions_service(['old'], timeout_seconds=10)
 
@@ -199,17 +199,17 @@ def test_a_session_without_heartbeats_is_never_called_stalled(jesse):
 
 
 def test_drafts_and_unknown_ids_settle_immediately(jesse):
-    jesse.reads = [_ok(_session('d', 'draft', kind='optimization'), {'session_id': 'x', 'status': 'not_found'})]
+    montecarlo.reads = [_ok(_session('d', 'draft', kind='optimization'), {'session_id': 'x', 'status': 'not_found'})]
 
     result = session_wait.wait_for_sessions_service(['d', 'x'])
 
-    assert result['done'] is True and jesse.calls == 1
+    assert result['done'] is True and montecarlo.calls == 1
     assert result['sessions'][0]['note'].endswith('Start it with run_optimization.')
     assert result['sessions'][1]['outcome'] == 'not_found'
 
 
 def test_the_timeout_returns_what_is_known_and_says_to_call_again(jesse):
-    jesse.reads = [_ok(_session('a', progress={'percent': 12.0}))]
+    montecarlo.reads = [_ok(_session('a', progress={'percent': 12.0}))]
 
     result = session_wait.wait_for_sessions_service('a', timeout_seconds=30)
 
@@ -222,7 +222,7 @@ def test_the_timeout_returns_what_is_known_and_says_to_call_again(jesse):
 
 def test_a_read_failure_after_a_good_read_is_a_warning_not_an_error(jesse):
     down = {'status': 'error', 'error_type': 'connection_error', 'message': 'Could not connect to Jesse API'}
-    jesse.reads = [_ok(_session('a')), down]
+    montecarlo.reads = [_ok(_session('a')), down]
 
     result = session_wait.wait_for_sessions_service(['a'], timeout_seconds=9)
 
@@ -231,7 +231,7 @@ def test_a_read_failure_after_a_good_read_is_a_warning_not_an_error(jesse):
 
 
 def test_never_reading_the_status_is_an_error(jesse):
-    jesse.reads = [{'status': 'error', 'error_type': 'connection_error', 'message': 'Could not connect to Jesse API'}]
+    montecarlo.reads = [{'status': 'error', 'error_type': 'connection_error', 'message': 'Could not connect to Jesse API'}]
 
     result = session_wait.wait_for_sessions_service(['a'], timeout_seconds=6)
 
@@ -251,4 +251,4 @@ def test_invalid_arguments_are_refused_before_waiting(jesse, kwargs, message):
     result = session_wait.wait_for_sessions_service(**kwargs)
 
     assert result['status'] == 'error' and message in result['message']
-    assert jesse.calls == 0
+    assert montecarlo.calls == 0

@@ -13,30 +13,30 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from mcp.server.fastmcp import FastMCP
 
-import jesse.mcp.tools.services.candles as candles_service
-import jesse.mcp.tools.services.credentials as credentials_service
-from jesse.controllers import data_provider_credentials_controller, exchange_controller
-from jesse.info import live_trading_exchanges
-from jesse.mcp.agent_rules import _load_packaged_rules
-from jesse.mcp.tools import register_tools
-from jesse.mcp.tools.credentials import register_credentials_tools
-from jesse.models.DataProviderCredentials import DataProviderCredentials
-from jesse.models.ExchangeApiKeys import ExchangeApiKeys
-from jesse.services import auth
-from jesse.services.historical_data import massive_stocks
-from jesse.services.historical_data.errors import (
+import montecarlo.mcp.tools.services.candles as candles_service
+import montecarlo.mcp.tools.services.credentials as credentials_service
+from montecarlo.controllers import data_provider_credentials_controller, exchange_controller
+from montecarlo.info import live_trading_exchanges
+from montecarlo.mcp.agent_rules import _load_packaged_rules
+from montecarlo.mcp.tools import register_tools
+from montecarlo.mcp.tools.credentials import register_credentials_tools
+from montecarlo.models.DataProviderCredentials import DataProviderCredentials
+from montecarlo.models.ExchangeApiKeys import ExchangeApiKeys
+from montecarlo.services import auth
+from montecarlo.services.historical_data import massive_stocks
+from montecarlo.services.historical_data.errors import (
     ProviderAuthenticationError,
     ProviderEntitlementError,
     ProviderRateLimitError,
     ProviderRequestError,
     ProviderUnavailableError,
 )
-from jesse.store.state_app import AppState
+from montecarlo.store.state_app import AppState
 from tests.mcp_tool_adapters import callable_tool
 
 
 PASSWORD = 'credential-tools-password'
-JESSE_URL = 'http://jesse.test'
+JESSE_URL = 'http://montecarlo.test'
 
 # Fake secrets. Each has a distinctive first and last four characters because Jesse's
 # Dashboard transformer masks values as value[:4] + '***...***' + value[-4:]; checking for
@@ -134,8 +134,8 @@ def test_no_tool_can_export_or_reveal_credentials():
     # export_candles and export_backtest_report write stored market data and backtest results into
     # the project; they never reach a credential route.
     assert credential_like == CREDENTIAL_TOOLS | {'export_candles', 'export_backtest_report'}
-    import jesse.mcp.tools.services.backtest as backtest_service
-    import jesse.mcp.tools.services.candles as candles_service
+    import montecarlo.mcp.tools.services.backtest as backtest_service
+    import montecarlo.mcp.tools.services.candles as candles_service
     candle_source = open(candles_service.__file__, encoding='utf-8').read()
     assert '/api-keys' not in candle_source and 'credentials' not in candle_source.split('def export_candles_service')[1]
     backtest_source = open(backtest_service.__file__, encoding='utf-8').read()
@@ -215,7 +215,7 @@ def backend(tmp_path, monkeypatch):
     models = [ExchangeApiKeys, DataProviderCredentials]
     # Jesse stores timezone-aware UTC datetimes, which PostgreSQL returns as datetimes. SQLite
     # keeps them as text that peewee cannot parse back, so the fake clock is naive UTC.
-    monkeypatch.setattr('jesse.helpers.now_to_datetime', lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    monkeypatch.setattr('montecarlo.helpers.now_to_datetime', lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     monkeypatch.setitem(auth.ENV_VALUES, 'PASSWORD', PASSWORD)
     monkeypatch.setattr(credentials_service.mcp_config, 'JESSE_API_URL', JESSE_URL)
     monkeypatch.setattr(credentials_service.mcp_config, 'JESSE_PASSWORD', PASSWORD)
@@ -709,7 +709,7 @@ def mcp_backend(monkeypatch):
     def fake_post(url, headers=None, json=None, timeout=None):
         return fake_request('POST', url, headers=headers, json=json, timeout=timeout)
 
-    monkeypatch.setattr(credentials_service.mcp_config, 'JESSE_API_URL', 'http://jesse.test')
+    monkeypatch.setattr(credentials_service.mcp_config, 'JESSE_API_URL', 'http://montecarlo.test')
     monkeypatch.setattr(credentials_service.mcp_config, 'JESSE_PASSWORD', 'test-password')
     monkeypatch.setattr('requests.request', fake_request)
     monkeypatch.setattr('requests.post', fake_post)
@@ -725,7 +725,7 @@ def test_search_symbols_service_uses_the_shared_search_endpoint(mcp_backend):
 
     result = candles_service.search_symbols_service('Massive Stocks', 'microsoft', limit=5)
 
-    assert calls[0]['url'] == 'http://jesse.test/exchange/search-symbols'
+    assert calls[0]['url'] == 'http://montecarlo.test/exchange/search-symbols'
     assert calls[0]['json'] == {'exchange': 'Massive Stocks', 'query': 'microsoft', 'limit': 5}
     assert calls[0]['headers']['Authorization'] != 'test-password'
     assert result['status'] == 'success'

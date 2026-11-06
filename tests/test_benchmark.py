@@ -5,19 +5,19 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-import jesse.helpers as jh
-from jesse import exceptions
-from jesse.enums import exchanges
-from jesse.modes import backtest_mode
-from jesse.routes import router
-from jesse.services import backtest_report, benchmark, charts
-from jesse.services import metrics as stats
-from jesse.store import store
-from jesse.testing_utils import get_btc_and_eth_candles, get_btc_candles, get_downtrend_candles, set_up
+import montecarlo.helpers as jh
+from montecarlo import exceptions
+from montecarlo.enums import exchanges
+from montecarlo.modes import backtest_mode
+from montecarlo.routes import router
+from montecarlo.services import backtest_report, benchmark, charts
+from montecarlo.services import metrics as stats
+from montecarlo.store import store
+from montecarlo.testing_utils import get_btc_and_eth_candles, get_btc_candles, get_downtrend_candles, set_up
 
-# jesse.models re-exports the model class under the module's name, so load the
+# montecarlo.models re-exports the model class under the module's name, so load the
 # module itself to reach its DB helper functions.
-backtest_session_model = importlib.import_module('jesse.models.BacktestSession')
+backtest_session_model = importlib.import_module('montecarlo.models.BacktestSession')
 
 DAY_MS = 86_400_000
 START = 1_546_300_800_000  # 2019-01-01

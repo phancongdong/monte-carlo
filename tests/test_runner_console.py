@@ -1,5 +1,5 @@
 """What research runners print: the version check, the startup banners and the hub's cluster events."""
-from jesse.services import runner_console as console
+from montecarlo.services import runner_console as console
 
 
 def _runner(name, alive=True, version='3.4.0', role='runner', budget=7, cores=8, seconds=2.0):

@@ -4,7 +4,7 @@ import math
 import numpy as np
 import pytest
 
-import jesse.helpers as jh
+import montecarlo.helpers as jh
 
 
 # This mirrors what Starlette's JSONResponse does internally: it renders with

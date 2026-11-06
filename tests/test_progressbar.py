@@ -1,4 +1,4 @@
-from jesse.services.progressbar import Progressbar
+from montecarlo.services.progressbar import Progressbar
 
 
 def test_update_clamps_a_partial_final_step():

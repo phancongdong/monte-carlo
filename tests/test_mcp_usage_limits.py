@@ -1,5 +1,5 @@
 """
-Tests for the MCP usage-limits feature (jesse/mcp/usage_limits.py).
+Tests for the MCP usage-limits feature (montecarlo/mcp/usage_limits.py).
 
 Covers:
 - credit weighting math / config constants
@@ -17,7 +17,7 @@ import importlib
 
 import pytest
 
-import jesse.mcp.usage_limits as ul
+import montecarlo.mcp.usage_limits as ul
 
 
 @pytest.fixture(autouse=True)
@@ -292,7 +292,7 @@ def test_gate_selects_guest_vs_free_limit():
 
 def test_no_license_token_is_treated_as_guest(monkeypatch):
     # No token at all → guest (metered), NOT fail-open. Only a real backend error fails open.
-    monkeypatch.setattr("jesse.services.auth.get_access_token", lambda: None)
+    monkeypatch.setattr("montecarlo.services.auth.get_access_token", lambda: None)
     assert ul.get_user_plan() == "guest"
 
 
@@ -343,7 +343,7 @@ def test_meter_default_is_remote(monkeypatch):
 
 def _gated_remote(monkeypatch, decision):
     """A gated tool running through the REMOTE backend, with _remote_usage_decision stubbed."""
-    import jesse.mcp.usage_limits as ul
+    import montecarlo.mcp.usage_limits as ul
     monkeypatch.setattr(ul, "USAGE_METER_BACKEND", "remote")
     monkeypatch.setattr(ul, "_remote_usage_decision", lambda feature: decision)
     calls = []
@@ -357,14 +357,14 @@ def _gated_remote(monkeypatch, decision):
 
 
 def test_remote_allowed_runs_the_tool(monkeypatch):
-    import jesse.mcp.usage_limits as ul
+    import montecarlo.mcp.usage_limits as ul
     tool, calls = _gated_remote(monkeypatch, ul.ConsumeResult(allowed=True, used=1, limit=100))
     assert tool() == "ran"
     assert len(calls) == 1
 
 
 def test_remote_blocked_free_returns_limit_reached(monkeypatch):
-    import jesse.mcp.usage_limits as ul
+    import montecarlo.mcp.usage_limits as ul
     tool, calls = _gated_remote(monkeypatch, ul.ConsumeResult(allowed=False, used=100, limit=100, is_guest=False))
     out = tool()
     assert isinstance(out, dict) and out["status"] == "limit_reached"
@@ -373,7 +373,7 @@ def test_remote_blocked_free_returns_limit_reached(monkeypatch):
 
 
 def test_remote_blocked_guest_gets_account_message(monkeypatch):
-    import jesse.mcp.usage_limits as ul
+    import montecarlo.mcp.usage_limits as ul
     tool, calls = _gated_remote(monkeypatch, ul.ConsumeResult(allowed=False, used=0, limit=0, is_guest=True))
     out = tool()
     assert out["status"] == "limit_reached" and out["is_guest"] is True
@@ -389,7 +389,7 @@ def test_remote_fails_open_when_backend_unreachable(monkeypatch):
 
 
 def test_remote_usage_decision_parses_response_and_sends_feature(monkeypatch):
-    import jesse.mcp.usage_limits as ul
+    import montecarlo.mcp.usage_limits as ul
 
     class FakeResp:
         status_code = 200
@@ -405,7 +405,7 @@ def test_remote_usage_decision_parses_response_and_sends_feature(monkeypatch):
         captured["json"] = json
         return FakeResp()
 
-    monkeypatch.setattr("jesse.services.auth.get_access_token", lambda: "tok-123")
+    monkeypatch.setattr("montecarlo.services.auth.get_access_token", lambda: "tok-123")
     monkeypatch.setattr("requests.post", fake_post)
     res = ul._remote_usage_decision("mcp")
     assert res.allowed is True
@@ -417,7 +417,7 @@ def test_remote_usage_decision_parses_response_and_sends_feature(monkeypatch):
 
 
 def test_remote_usage_decision_fails_open_on_non_200(monkeypatch):
-    import jesse.mcp.usage_limits as ul
+    import montecarlo.mcp.usage_limits as ul
 
     class FakeResp:
         status_code = 503
@@ -426,6 +426,6 @@ def test_remote_usage_decision_fails_open_on_non_200(monkeypatch):
         def json(self):
             return {}
 
-    monkeypatch.setattr("jesse.services.auth.get_access_token", lambda: "tok")
+    monkeypatch.setattr("montecarlo.services.auth.get_access_token", lambda: "tok")
     monkeypatch.setattr("requests.post", lambda *a, **k: FakeResp())
     assert ul._remote_usage_decision("mcp") is None

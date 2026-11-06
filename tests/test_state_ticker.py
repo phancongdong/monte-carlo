@@ -1,9 +1,9 @@
 import numpy as np
 
-import jesse.helpers as jh
-from jesse.config import config, reset_config
-from jesse.routes import router
-from jesse.store import store
+import montecarlo.helpers as jh
+from montecarlo.config import config, reset_config
+from montecarlo.routes import router
+from montecarlo.store import store
 
 
 def set_up():

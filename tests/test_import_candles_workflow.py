@@ -4,9 +4,9 @@ from types import SimpleNamespace
 import arrow
 import pytest
 
-from jesse import exceptions
-import jesse.modes.import_candles_mode as importer
-from jesse.modes.import_candles_mode.drivers.interface import CandleExchange
+from montecarlo import exceptions
+import montecarlo.modes.import_candles_mode as importer
+from montecarlo.modes.import_candles_mode.drivers.interface import CandleExchange
 
 
 class _Expression:
@@ -108,7 +108,7 @@ class _FakeDriver(CandleExchange):
 
 def _configure_import(monkeypatch, state, driver, fixed_now):
     """Isolate an import run from the clock, database, Redis, and real providers."""
-    from jesse.services.db import database
+    from montecarlo.services.db import database
 
     database_events = []
     monkeypatch.setattr(importer, 'Candle', _candle_model(state))
@@ -488,8 +488,8 @@ def test_prefix_backfill_stops_when_the_exchange_only_has_later_candles(monkeypa
 
 
 def test_legacy_adapter_reports_listing_time_and_propagates_unknown_symbols():
-    from jesse.services.historical_data import HistoricalCandleRange, HistoricalCandleRequest
-    from jesse.services.historical_data.errors import ProviderSymbolNotFoundError
+    from montecarlo.services.historical_data import HistoricalCandleRange, HistoricalCandleRequest
+    from montecarlo.services.historical_data.errors import ProviderSymbolNotFoundError
 
     start, end = 1_000_000, 5_000_000
 
@@ -503,7 +503,7 @@ def test_legacy_adapter_reports_listing_time_and_propagates_unknown_symbols():
 
     class UnknownSymbolDriver(_FakeDriver):
         def get_starting_time(self, symbol):
-            from jesse import exceptions
+            from montecarlo import exceptions
             raise exceptions.SymbolNotFound('unknown')
 
     class FlakyDriver(_FakeDriver):

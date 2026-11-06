@@ -27,12 +27,12 @@ from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 from mcp.types import LATEST_PROTOCOL_VERSION
 
-import jesse.mcp.manager as mcp_manager
-import jesse.mcp.mcp_config as mcp_config
-import jesse.mcp.server as mcp_server
-from jesse.mcp.auth import dashboard_token
-from jesse.services.env import ENV_VALUES
-from jesse.services.web import fastapi_app
+import montecarlo.mcp.manager as mcp_manager
+import montecarlo.mcp.mcp_config as mcp_config
+import montecarlo.mcp.server as mcp_server
+from montecarlo.mcp.auth import dashboard_token
+from montecarlo.services.env import ENV_VALUES
+from montecarlo.services.web import fastapi_app
 
 PASSWORD = 'integration-test-password'
 TOKEN = dashboard_token(PASSWORD)

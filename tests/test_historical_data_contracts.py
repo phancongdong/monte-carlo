@@ -3,8 +3,8 @@ from dataclasses import FrozenInstanceError, asdict
 
 import pytest
 
-from jesse.exceptions import InvalidConfig
-from jesse.services.historical_data import (
+from montecarlo.exceptions import InvalidConfig
+from montecarlo.services.historical_data import (
     AdjustmentMode,
     AssetClass,
     HistoricalCandle,
@@ -21,7 +21,7 @@ from jesse.services.historical_data import (
     ProviderCapabilities,
     SymbolCatalogEntry,
 )
-from jesse.services.historical_data.errors import (
+from montecarlo.services.historical_data.errors import (
     HistoricalCandleValidationError,
     HistoricalDataRequestError,
     ProviderAuthenticationError,
@@ -30,7 +30,7 @@ from jesse.services.historical_data.errors import (
     ProviderRegistrationError,
     ProviderUnavailableError,
 )
-from jesse.services.simulation_assumptions import (
+from montecarlo.services.simulation_assumptions import (
     Annualization,
     SimulationModel,
     legacy_type_from_simulation_model,
@@ -257,7 +257,7 @@ def test_symbol_catalog_entries_default_to_bare_symbols_and_validate_details():
 
 
 def test_massive_stock_catalog_carries_company_name_type_and_listing_venue():
-    from jesse.services.historical_data.massive_stocks import MASSIVE_TICKERS_URL, MassiveStocksProvider
+    from montecarlo.services.historical_data.massive_stocks import MASSIVE_TICKERS_URL, MassiveStocksProvider
 
     session = _FakeMassiveSession([(MASSIVE_TICKERS_URL, {
         'status': 'OK',
@@ -284,7 +284,7 @@ def test_massive_stock_catalog_carries_company_name_type_and_listing_venue():
 
 
 def test_massive_futures_catalog_describes_contracts_through_their_product():
-    from jesse.services.historical_data.massive_stocks import (
+    from montecarlo.services.historical_data.massive_stocks import (
         MASSIVE_FUTURES_CONTRACTS_URL,
         MASSIVE_FUTURES_PRODUCTS_URL,
         MassiveFuturesProvider,
@@ -311,8 +311,8 @@ def test_massive_futures_catalog_describes_contracts_through_their_product():
 
 
 def _fake_symbol_catalog_backend(monkeypatch, entries):
-    from jesse.modes.import_candles_mode import drivers
-    from jesse.services import symbol_catalog
+    from montecarlo.modes.import_candles_mode import drivers
+    from montecarlo.services import symbol_catalog
 
     class CatalogProvider(BarsOnlyProvider):
         provider_id = 'Massive Stocks'
@@ -354,7 +354,7 @@ def _fake_symbol_catalog_backend(monkeypatch, entries):
 
 
 def test_supported_symbols_endpoint_returns_and_caches_symbol_details(monkeypatch):
-    from jesse.controllers import exchange_controller
+    from montecarlo.controllers import exchange_controller
 
     fake_redis, provider_calls = _fake_symbol_catalog_backend(monkeypatch, (
         SymbolCatalogEntry('SPY-USD', name='SPDR S&P 500 ETF Trust', kind='ETF', venue='NYSE Arca'),
@@ -380,8 +380,8 @@ def test_supported_symbols_endpoint_returns_and_caches_symbol_details(monkeypatc
 
 
 def test_symbol_search_ranks_ticker_prefixes_before_provider_names(monkeypatch):
-    from jesse.controllers import exchange_controller
-    from jesse.services.symbol_catalog import search_symbol_catalog
+    from montecarlo.controllers import exchange_controller
+    from montecarlo.services.symbol_catalog import search_symbol_catalog
 
     _fake_symbol_catalog_backend(monkeypatch, (
         SymbolCatalogEntry('GGLL-USD', name='Direxion Daily GOOGL Bull 2X ETF', kind='ETF', venue='NASDAQ'),

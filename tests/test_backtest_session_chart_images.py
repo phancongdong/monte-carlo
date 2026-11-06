@@ -7,12 +7,12 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from jesse.controllers import backtest_controller
-from jesse.services import auth, charts, transformers
+from montecarlo.controllers import backtest_controller
+from montecarlo.services import auth, charts, transformers
 
-# jesse.models re-exports the model class under the module's name, so load the
+# montecarlo.models re-exports the model class under the module's name, so load the
 # module itself to reach its DB helper functions.
-backtest_session_model = importlib.import_module('jesse.models.BacktestSession')
+backtest_session_model = importlib.import_module('montecarlo.models.BacktestSession')
 
 
 PASSWORD = 'chart-images-password'

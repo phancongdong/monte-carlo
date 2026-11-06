@@ -2,12 +2,12 @@ from unittest.mock import Mock
 
 import pytest
 
-import jesse.helpers as jh
-from jesse import exceptions
-from jesse.config import config, reset_config
-from jesse.enums import exchanges, timeframes
-from jesse.routes import router
-from jesse.services.validators import validate_routes
+import montecarlo.helpers as jh
+from montecarlo import exceptions
+from montecarlo.config import config, reset_config
+from montecarlo.enums import exchanges, timeframes
+from montecarlo.routes import router
+from montecarlo.services.validators import validate_routes
 
 
 @pytest.fixture(autouse=True)
@@ -185,8 +185,8 @@ def test_reinitialized_non_live_route_gets_its_own_sandbox_driver() -> None:
     second_exchange = 'Second Research Exchange'
     router.initiate([_route('BTC-USDT', exchange=first_exchange)])
 
-    from jesse.services.api import api
-    from jesse.services.broker import Broker
+    from montecarlo.services.api import api
+    from montecarlo.services.broker import Broker
 
     try:
         api.initiate_driver(first_exchange)
@@ -236,13 +236,13 @@ def test_reset_config_clears_values_cached_from_the_previous_mode() -> None:
 
 
 def test_routes_can_be_imported_before_the_models():
-    # The live plugin imports jesse.routes first; jesse.models imports it back, so a load-time
-    # import of jesse.models in jesse.routes was circular. A fresh interpreter keeps it honest.
+    # The live plugin imports montecarlo.routes first; montecarlo.models imports it back, so a load-time
+    # import of montecarlo.models in montecarlo.routes was circular. A fresh interpreter keeps it honest.
     import subprocess
     import sys
 
     result = subprocess.run(
-        [sys.executable, '-c', 'import jesse.routes; from jesse.routes import router; print(router)'],
+        [sys.executable, '-c', 'import montecarlo.routes; from montecarlo.routes import router; print(router)'],
         capture_output=True, text=True,
     )
     assert result.returncode == 0, result.stderr

@@ -1,4 +1,4 @@
-from jesse.strategies import Strategy, cached
+from montecarlo.strategies import Strategy, cached
 
 
 class CachedStrategy(Strategy):

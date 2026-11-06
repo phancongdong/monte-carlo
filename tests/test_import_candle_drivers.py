@@ -3,32 +3,32 @@ from importlib import import_module
 
 import pytest
 
-from jesse import exceptions
-from jesse.modes.import_candles_mode.drivers import drivers
-from jesse.modes.import_candles_mode.drivers.Apex.ApexOmniPerpetualMain import (
+from montecarlo import exceptions
+from montecarlo.modes.import_candles_mode.drivers import drivers
+from montecarlo.modes.import_candles_mode.drivers.Apex.ApexOmniPerpetualMain import (
     ApexOmniPerpetualMain,
 )
-from jesse.modes.import_candles_mode.drivers.Binance.BinanceMain import BinanceMain
-from jesse.modes.import_candles_mode.drivers.Bitfinex.BitfinexSpot import BitfinexSpot
-from jesse.modes.import_candles_mode.drivers.Bybit.BybitMain import BybitMain
-from jesse.modes.import_candles_mode.drivers.Coinbase.CoinbaseSpot import CoinbaseSpot
-from jesse.modes.import_candles_mode.drivers.Gate.GateSpotMain import GateSpotMain
-from jesse.modes.import_candles_mode.drivers.Gate.GateUSDTMain import GateUSDTMain
-from jesse.modes.import_candles_mode.drivers.Hyperliquid.HyperliquidPerpetualMain import (
+from montecarlo.modes.import_candles_mode.drivers.Binance.BinanceMain import BinanceMain
+from montecarlo.modes.import_candles_mode.drivers.Bitfinex.BitfinexSpot import BitfinexSpot
+from montecarlo.modes.import_candles_mode.drivers.Bybit.BybitMain import BybitMain
+from montecarlo.modes.import_candles_mode.drivers.Coinbase.CoinbaseSpot import CoinbaseSpot
+from montecarlo.modes.import_candles_mode.drivers.Gate.GateSpotMain import GateSpotMain
+from montecarlo.modes.import_candles_mode.drivers.Gate.GateUSDTMain import GateUSDTMain
+from montecarlo.modes.import_candles_mode.drivers.Hyperliquid.HyperliquidPerpetualMain import (
     HyperliquidPerpetualMain,
 )
-from jesse.modes.import_candles_mode.drivers.Kraken.KrakenPerpetualMain import (
+from montecarlo.modes.import_candles_mode.drivers.Kraken.KrakenPerpetualMain import (
     KrakenPerpetualMain,
 )
-from jesse.modes.import_candles_mode.drivers.Kraken.KrakenSpotMain import KrakenSpotMain
-from jesse.modes.import_candles_mode.drivers.KuCoin.KuCoinFuturesMain import (
+from montecarlo.modes.import_candles_mode.drivers.Kraken.KrakenSpotMain import KrakenSpotMain
+from montecarlo.modes.import_candles_mode.drivers.KuCoin.KuCoinFuturesMain import (
     KuCoinFuturesMain,
 )
-from jesse.modes.import_candles_mode.drivers.KuCoin.KuCoinSpotMain import KuCoinSpotMain
-from jesse.modes.import_candles_mode.drivers.Lighter.LighterMain import LighterMain
-from jesse.modes.import_candles_mode.drivers.interface import CandleExchange
-from jesse.services.historical_data import HistoricalCandleRange, HistoricalCandleRequest
-from jesse.services.historical_data.errors import ProviderRateLimitError
+from montecarlo.modes.import_candles_mode.drivers.KuCoin.KuCoinSpotMain import KuCoinSpotMain
+from montecarlo.modes.import_candles_mode.drivers.Lighter.LighterMain import LighterMain
+from montecarlo.modes.import_candles_mode.drivers.interface import CandleExchange
+from montecarlo.services.historical_data import HistoricalCandleRange, HistoricalCandleRequest
+from montecarlo.services.historical_data.errors import ProviderRateLimitError
 
 
 START_TIMESTAMP = 1_700_000_040_000
@@ -288,7 +288,7 @@ def test_kucoin_exchange_rate_limit_is_bounded(monkeypatch):
 
     monkeypatch.setattr(driver.session, 'get', request)
     kucoin_spot_module = import_module(
-        'jesse.modes.import_candles_mode.drivers.KuCoin.KuCoinSpotMain'
+        'montecarlo.modes.import_candles_mode.drivers.KuCoin.KuCoinSpotMain'
     )
     monkeypatch.setattr(kucoin_spot_module.time, 'sleep', lambda _: None)
 

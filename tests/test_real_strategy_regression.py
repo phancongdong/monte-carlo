@@ -1,7 +1,7 @@
 """
 Real-strategy regression tests.
 
-These run full `jesse.research.backtest()` sessions with *real* strategies (adapted
+These run full `montecarlo.research.backtest()` sessions with *real* strategies (adapted
 from the maintainer's bot project) over long, fully deterministic synthetic candle
 windows, and assert the complete result fingerprint (key metrics rounded to 6
 decimals + a sha256 over every closed trade's prices/qty/fees/timestamps) against
@@ -35,7 +35,7 @@ EXPECTED_FROM_SHA = '0987c304d7f276cfc09c942e53d4c39c9395b8ee'
 START_TS = 1609459200000  # 2021-01-01T00:00:00 UTC
 EXCHANGE = 'Test Exchange'
 _STRATEGIES_DIR = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'jesse', 'strategies'
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'montecarlo', 'strategies'
 )
 
 # ---------------------------------------------------------------------------
@@ -107,12 +107,12 @@ def _gen_candles(seed: int, days: int, warmup_days: int):
 def _load_strategy(name: str):
     """
     Import a test strategy class. Falls back to loading the class straight from this
-    repo's jesse/strategies/<name>/__init__.py file, which lets an external capture
+    repo's montecarlo/strategies/<name>/__init__.py file, which lets an external capture
     script run the exact same strategy code against a *different* jesse checkout
     (how the master expected-values were recorded).
     """
     try:
-        module = importlib.import_module(f'jesse.strategies.{name}')
+        module = importlib.import_module(f'montecarlo.strategies.{name}')
     except ModuleNotFoundError:
         path = os.path.join(_STRATEGIES_DIR, name, '__init__.py')
         spec = importlib.util.spec_from_file_location(f'_real_strategy_regression_{name}', path)
@@ -160,8 +160,8 @@ def _fingerprint(result: dict) -> dict:
 
 def run_scenario(scenario: dict) -> dict:
     """Build deterministic inputs, run research.backtest() and return the fingerprint."""
-    import jesse.helpers as jh
-    from jesse.research import backtest
+    import montecarlo.helpers as jh
+    from montecarlo.research import backtest
 
     config = {
         'starting_balance': 10_000,

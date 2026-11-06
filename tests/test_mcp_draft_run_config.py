@@ -5,13 +5,13 @@ from types import SimpleNamespace
 
 import pytest
 
-from jesse.mcp.tools.services import backtest as backtest_service
-from jesse.mcp.tools.services import draft_config
-from jesse.mcp.tools.services import monte_carlo as monte_carlo_service
-from jesse.mcp.tools.services import optimization as optimization_service
-from jesse.mcp.tools.services import session_config
-from jesse.mcp.tools.services import significance_test as significance_test_service
-from jesse.mcp.tools.services.session_config import (
+from montecarlo.mcp.tools.services import backtest as backtest_service
+from montecarlo.mcp.tools.services import draft_config
+from montecarlo.mcp.tools.services import monte_carlo as monte_carlo_service
+from montecarlo.mcp.tools.services import optimization as optimization_service
+from montecarlo.mcp.tools.services import session_config
+from montecarlo.mcp.tools.services import significance_test as significance_test_service
+from montecarlo.mcp.tools.services.session_config import (
     parse_draft_config_arguments,
     resolve_draft_run_config,
 )
@@ -286,7 +286,7 @@ def test_exporting_a_report_points_the_user_to_the_dashboard(monkeypatch):
 
     monkeypatch.setattr(backtest_service.requests, 'post', post)
     monkeypatch.setattr(backtest_service, 'hash_password', lambda password: 'hashed')
-    monkeypatch.setattr(backtest_service.mcp_config, 'dashboard_url', lambda kind, session_id: f'http://jesse.test/#/{kind}/{session_id}')
+    monkeypatch.setattr(backtest_service.mcp_config, 'dashboard_url', lambda kind, session_id: f'http://montecarlo.test/#/{kind}/{session_id}')
 
     result = backtest_service.export_backtest_report_service('session-id', overwrite=True)
 
@@ -294,7 +294,7 @@ def test_exporting_a_report_points_the_user_to_the_dashboard(monkeypatch):
     assert calls[0][1]['json'] == {'path': None, 'overwrite': True}
     assert result['status'] == 'success'
     assert result['path'] == 'research_scripts/backtest_reports/a.pdf'
-    assert result['dashboard_url'] == 'http://jesse.test/#/backtest/session-id'
+    assert result['dashboard_url'] == 'http://montecarlo.test/#/backtest/session-id'
 
 
 def test_exporting_a_backtest_without_a_report_explains_itself(monkeypatch):

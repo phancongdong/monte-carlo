@@ -1,6 +1,6 @@
-from jesse.models import ClosedTrade
-from jesse.store import store
-from jesse.testing_utils import single_route_backtest
+from montecarlo.models import ClosedTrade
+from montecarlo.store import store
+from montecarlo.testing_utils import single_route_backtest
 import numpy as np
 import pytest
 

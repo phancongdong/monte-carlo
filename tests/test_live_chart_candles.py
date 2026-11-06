@@ -3,10 +3,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from jesse.models.Option import Option
-from jesse.modes import data_provider
-from jesse.repositories import candle_repository, live_session_repository
-from jesse.services.db import database
+from montecarlo.models.Option import Option
+from montecarlo.modes import data_provider
+from montecarlo.repositories import candle_repository, live_session_repository
+from montecarlo.services.db import database
 
 
 GLOBAL = {'warm_up_candles': 10, 'generate_candles_from_1m': True}

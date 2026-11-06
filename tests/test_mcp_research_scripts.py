@@ -14,11 +14,11 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-import jesse.mcp.tools.services.project_files as project_files_service
-from jesse.controllers import research_scripts_controller
+import montecarlo.mcp.tools.services.project_files as project_files_service
+from montecarlo.controllers import research_scripts_controller
 from tests.conftest import process_exited
-from jesse.mcp.tools import register_tools
-from jesse.services import auth, research_jobs
+from montecarlo.mcp.tools import register_tools
+from montecarlo.services import auth, research_jobs
 from tests.mcp_tool_adapters import callable_tool
 
 
@@ -488,9 +488,9 @@ def test_production_limits_match_the_documented_values():
 def tools(api, monkeypatch):
     """The registered MCP tools, with their HTTP calls served by the real router in-process."""
     def forward_post(url, json=None, headers=None, timeout=None):
-        return api.post(url.removeprefix('http://jesse.test'), json=json, headers=headers)
+        return api.post(url.removeprefix('http://montecarlo.test'), json=json, headers=headers)
 
-    monkeypatch.setattr(project_files_service.mcp_config, 'JESSE_API_URL', 'http://jesse.test')
+    monkeypatch.setattr(project_files_service.mcp_config, 'JESSE_API_URL', 'http://montecarlo.test')
     monkeypatch.setattr(project_files_service.mcp_config, 'JESSE_PASSWORD', PASSWORD)
     monkeypatch.setattr(project_files_service.requests, 'post', forward_post)
     mcp = FakeMCP()

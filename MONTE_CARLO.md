@@ -30,7 +30,7 @@
 ## 4. Cách sử dụng trong Framework
 
 ```python
-from jesse.research.monte_carlo import monte_carlo_trades, monte_carlo_candles
+from montecarlo.research.monte_carlo import monte_carlo_trades, monte_carlo_candles
 
 # Mô phỏng hoán vị chuỗi lệnh (Trade-order Monte Carlo)
 trade_results = monte_carlo_trades(trades=my_trades, num_scenarios=1000)

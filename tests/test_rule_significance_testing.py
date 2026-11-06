@@ -5,18 +5,18 @@ import sys
 import numpy as np
 import pytest
 
-import jesse.helpers as jh
-import jesse.indicators as ta
-from jesse import research
-from jesse.config import config
-from jesse.research.rule_significance_testing.common import (
+import montecarlo.helpers as jh
+import montecarlo.indicators as ta
+from montecarlo import research
+from montecarlo.config import config
+from montecarlo.research.rule_significance_testing.common import (
     _annualization_factor,
     _elapsed_annualization_factor,
 )
-from jesse.research.rule_significance_testing.simulator import run_signal_only_backtest
-from jesse.routes import router
-from jesse.store import store
-from jesse.strategies import Strategy
+from montecarlo.research.rule_significance_testing.simulator import run_signal_only_backtest
+from montecarlo.routes import router
+from montecarlo.store import store
+from montecarlo.strategies import Strategy
 
 
 class NoiseSignal(Strategy):
@@ -160,7 +160,7 @@ def _assert_research_runtime_is_clean() -> None:
     assert config['app']['trading_mode'] == ''
     assert router.routes == []
     assert router.data_routes == []
-    api_module = sys.modules.get('jesse.services.api')
+    api_module = sys.modules.get('montecarlo.services.api')
     if api_module is not None:
         assert api_module.api.drivers == {}
     assert store.vars == {}

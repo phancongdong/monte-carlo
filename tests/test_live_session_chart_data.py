@@ -1,10 +1,10 @@
 import json
 from types import SimpleNamespace
 
-import jesse.helpers as jh
-from jesse.controllers import live_controller
-from jesse.services import live_chart_service
-from jesse.services.web import GetLiveSessionChartDataRequestJson
+import montecarlo.helpers as jh
+from montecarlo.controllers import live_controller
+from montecarlo.services import live_chart_service
+from montecarlo.services.web import GetLiveSessionChartDataRequestJson
 
 
 def session(finished_at=1_700_100_000_000):

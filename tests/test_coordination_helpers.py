@@ -15,8 +15,8 @@ from unittest.mock import patch
 
 import pytest
 
-from jesse.services import redis as helpers
-from jesse.services.coordination_client import (
+from montecarlo.services import redis as helpers
+from montecarlo.services.coordination_client import (
     CoordinationCapacityError, CoordinationConnectionError, CoordinationError, CoordinationSizeError,
 )
 
@@ -114,7 +114,7 @@ if redis_unavailable:
 
     sys.meta_path.insert(0, MissingRedis())
 
-from jesse.services.redis import BACKEND
+from montecarlo.services.redis import BACKEND
 assert BACKEND == 'rust'
 import optuna
 
@@ -142,7 +142,7 @@ if redis_unavailable:
 def test_removed_backend_setting_handles_migration(backend, accepted):
     """Old Redis projects upgrade automatically; misspelled backend settings still fail."""
     result = subprocess.run(
-        [sys.executable, '-c', 'from jesse.services.redis import BACKEND; assert BACKEND == "rust"'],
+        [sys.executable, '-c', 'from montecarlo.services.redis import BACKEND; assert BACKEND == "rust"'],
         cwd=Path(__file__).resolve().parents[1],
         env={**os.environ, 'COORDINATION_BACKEND': backend},
         capture_output=True, text=True, timeout=30,

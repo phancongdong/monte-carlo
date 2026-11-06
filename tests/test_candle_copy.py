@@ -7,12 +7,12 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-import jesse.helpers as jh
-import jesse.mcp.tools.services.candles as candles_service
-from jesse.controllers import candles_controller
-from jesse.models.Candle import Candle
-from jesse.repositories import candle_repository
-from jesse.services import auth
+import montecarlo.helpers as jh
+import montecarlo.mcp.tools.services.candles as candles_service
+from montecarlo.controllers import candles_controller
+from montecarlo.models.Candle import Candle
+from montecarlo.repositories import candle_repository
+from montecarlo.services import auth
 
 
 SOURCE = ('Massive Stocks', 'SPY-USD')
@@ -183,13 +183,13 @@ def test_copy_candles_mcp_service_forwards_the_request(monkeypatch):
         }
         return SimpleNamespace(status_code=200, json=lambda: payload, text='')
 
-    monkeypatch.setattr(candles_service.mcp_config, 'JESSE_API_URL', 'http://jesse.test')
+    monkeypatch.setattr(candles_service.mcp_config, 'JESSE_API_URL', 'http://montecarlo.test')
     monkeypatch.setattr(candles_service.mcp_config, 'JESSE_PASSWORD', 'pw')
     monkeypatch.setattr('requests.post', fake_post)
 
     result = candles_service.copy_candles_service('Massive Stocks', 'SPY-USD', 'Binance Perpetual Futures', 'SPY-USDT')
 
-    assert captured['url'] == 'http://jesse.test/candles/copy'
+    assert captured['url'] == 'http://montecarlo.test/candles/copy'
     assert captured['json'] == {
         'exchange': 'Massive Stocks', 'symbol': 'SPY-USD', 'target_exchange': 'Binance Perpetual Futures',
         'target_symbol': 'SPY-USDT', 'delete_source': False,

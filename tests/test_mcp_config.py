@@ -3,13 +3,13 @@ from types import SimpleNamespace
 
 import pytest
 
-import jesse.mcp.tools.services.config as config_service
-from jesse.mcp.tools.services import backtest as backtest_service
-from jesse.mcp.tools.services import monte_carlo as monte_carlo_service
-from jesse.mcp.tools.services import optimization as optimization_service
-from jesse.mcp.tools.services import session_config
-from jesse.mcp.tools.services import significance_test as significance_test_service
-from jesse.mcp.tools.services.session_config import (
+import montecarlo.mcp.tools.services.config as config_service
+from montecarlo.mcp.tools.services import backtest as backtest_service
+from montecarlo.mcp.tools.services import monte_carlo as monte_carlo_service
+from montecarlo.mcp.tools.services import optimization as optimization_service
+from montecarlo.mcp.tools.services import session_config
+from montecarlo.mcp.tools.services import significance_test as significance_test_service
+from montecarlo.mcp.tools.services.session_config import (
     backtest_engine_config,
     resolve_session_run_config,
 )
@@ -32,7 +32,7 @@ def test_update_config_unwraps_get_config_envelope(monkeypatch):
         captured_request.update(kwargs)
         return _SuccessfulResponse()
 
-    monkeypatch.setattr(config_service.mcp_config, 'JESSE_API_URL', 'http://jesse.test')
+    monkeypatch.setattr(config_service.mcp_config, 'JESSE_API_URL', 'http://montecarlo.test')
     monkeypatch.setattr(config_service.mcp_config, 'JESSE_PASSWORD', 'test-password')
     monkeypatch.setattr('requests.post', fake_post)
 
@@ -50,7 +50,7 @@ def test_update_config_unwraps_get_config_envelope(monkeypatch):
         'status': 'success',
         'message': 'Configuration updated successfully'
     }
-    assert captured_request['url'] == 'http://jesse.test/config/update'
+    assert captured_request['url'] == 'http://montecarlo.test/config/update'
     assert captured_request['json'] == {
         'current_config': {
             'backtest': {

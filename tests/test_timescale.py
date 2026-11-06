@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import peewee
 import pytest
 
-from jesse.services import timescale
+from montecarlo.services import timescale
 
 
 DROP_KEY = 'ALTER TABLE "public"."candle" DROP CONSTRAINT "candle_pkey"'

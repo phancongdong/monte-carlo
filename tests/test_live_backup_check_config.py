@@ -1,7 +1,7 @@
 import pytest
 
-import jesse.helpers as jh
-from jesse.config import config, reset_config, set_config
+import montecarlo.helpers as jh
+from montecarlo.config import config, reset_config, set_config
 
 
 def paper_session_config(**backup_checks):

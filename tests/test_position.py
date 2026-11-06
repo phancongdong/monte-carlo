@@ -1,9 +1,9 @@
-from jesse.enums import exchanges
-from jesse.models import Position
-from jesse.testing_utils import set_up as configure_test, single_route_backtest
-from jesse.services import exchange_service, position_service
-from jesse.routes import router
-from jesse.store import store
+from montecarlo.enums import exchanges
+from montecarlo.models import Position
+from montecarlo.testing_utils import set_up as configure_test, single_route_backtest
+from montecarlo.services import exchange_service, position_service
+from montecarlo.routes import router
+from montecarlo.store import store
 
 
 def set_up():

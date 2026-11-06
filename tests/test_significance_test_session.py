@@ -4,8 +4,8 @@ from types import SimpleNamespace
 import pytest
 
 
-session_model = import_module('jesse.models.SignificanceTestSession')
-significance_test_mode = import_module('jesse.modes.significance_test_mode')
+session_model = import_module('montecarlo.models.SignificanceTestSession')
+significance_test_mode = import_module('montecarlo.modes.significance_test_mode')
 
 
 def test_orphaned_running_session_is_reconciled_as_stopped(monkeypatch):
@@ -16,7 +16,7 @@ def test_orphaned_running_session_is_reconciled_as_stopped(monkeypatch):
     status_updates = []
 
     monkeypatch.setattr(session_model.jh, 'is_unit_testing', lambda: False)
-    monkeypatch.setattr('jesse.services.redis.is_process_active', lambda session_id: False)
+    monkeypatch.setattr('montecarlo.services.redis.is_process_active', lambda session_id: False)
     monkeypatch.setattr(
         session_model,
         'update_significance_test_session_status',
@@ -34,7 +34,7 @@ def test_validation_failure_persists_exception_and_stops_session(monkeypatch):
     exceptions = []
     status_updates = []
 
-    monkeypatch.setattr('jesse.config.set_config', lambda config: None)
+    monkeypatch.setattr('montecarlo.config.set_config', lambda config: None)
     monkeypatch.setattr(significance_test_mode.router, 'initiate', lambda routes, data_routes: None)
     monkeypatch.setattr(significance_test_mode.store.app, 'set_session_id', lambda value: None)
     monkeypatch.setattr(significance_test_mode, 'register_custom_exception_handler', lambda: None)

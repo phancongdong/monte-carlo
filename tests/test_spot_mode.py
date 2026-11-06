@@ -1,8 +1,8 @@
-from jesse.testing_utils import single_route_backtest
+from montecarlo.testing_utils import single_route_backtest
 import pytest
-from jesse import exceptions
-from jesse.services import metrics
-from jesse.store import store
+from montecarlo import exceptions
+from montecarlo.services import metrics
+from montecarlo.store import store
 
 
 def test_should_be_able_to_short_in_spot_mode():

@@ -10,13 +10,13 @@ from types import SimpleNamespace
 import peewee
 import pytest
 
-from jesse.models.BacktestSession import BacktestSession, update_backtest_session_status
-from jesse.models.MonteCarloSession import MonteCarloCandlesSession, MonteCarloSession, MonteCarloTradesSession
-from jesse.models.OptimizationSession import OptimizationSession, get_optimization_session_by_id
-from jesse.models.RunnerJob import CodeBlob, Runner, RunnerFile, RunnerJob
-from jesse.models.SignificanceTestSession import SignificanceTestSession
-from jesse.services import code_bundle, runner_queue, runner_worker, session_liveness
-from jesse.services import redis as coordinator
+from montecarlo.models.BacktestSession import BacktestSession, update_backtest_session_status
+from montecarlo.models.MonteCarloSession import MonteCarloCandlesSession, MonteCarloSession, MonteCarloTradesSession
+from montecarlo.models.OptimizationSession import OptimizationSession, get_optimization_session_by_id
+from montecarlo.models.RunnerJob import CodeBlob, Runner, RunnerFile, RunnerJob
+from montecarlo.models.SignificanceTestSession import SignificanceTestSession
+from montecarlo.services import code_bundle, runner_queue, runner_worker, session_liveness
+from montecarlo.services import redis as coordinator
 
 SESSION_MODELS = [BacktestSession, OptimizationSession, MonteCarloSession, MonteCarloTradesSession,
                   MonteCarloCandlesSession, SignificanceTestSession]
@@ -40,7 +40,7 @@ def project(tmp_path):
     _write(root, 'strategies/Base/__init__.py', 'import numpy as np\nfrom custom_indicators.trend import slope\n')
     _write(root, 'strategies/Base/params.json', '{"fast": 9}')
     _write(root, 'strategies/Variant7/__init__.py',
-           'import json, os\nfrom jesse.strategies import Strategy\nfrom strategies.Base import *\nimport talib\n')
+           'import json, os\nfrom montecarlo.strategies import Strategy\nfrom strategies.Base import *\nimport talib\n')
     _write(root, 'strategies/PairA/__init__.py', 'from strategies import Shared\nimport pandas as pd\n')
     _write(root, 'strategies/PairB/__init__.py', 'from . import helpers\n')
     _write(root, 'strategies/PairB/helpers.py', 'X = 1\n')
@@ -185,14 +185,14 @@ def test_a_runner_projects_own_strategies_package_does_not_hide_the_jobs(tmp_pat
 
 def test_a_runner_job_caches_candles_in_the_runner_project(tmp_path, monkeypatch):
     # The job folder is deleted after the job; the next jobs on this machine reuse the candles.
-    from jesse.services import cache as cache_module
+    from montecarlo.services import cache as cache_module
 
     cache_dir = str(tmp_path / 'research' / 'storage' / 'temp')
     job_dir = str(tmp_path / 'job')
     os.makedirs(os.path.join(job_dir, 'storage'))
 
     def fake_run(session_id, value):
-        from jesse.services.cache import cache
+        from montecarlo.services.cache import cache
         cache.set_value('candles', [1, 2, 3])
 
     monkeypatch.setattr(runner_worker, '_mode_function', lambda function: fake_run)
@@ -246,7 +246,7 @@ def pg(monkeypatch):
         config['POSTGRES_NAME'], user=config['POSTGRES_USERNAME'], password=config['POSTGRES_PASSWORD'],
         host=config['POSTGRES_HOST'], port=int(config['POSTGRES_PORT']), options=f'-c search_path={schema}')
     database.execute_sql(f'CREATE SCHEMA {schema}')
-    from jesse.services import db as db_module
+    from montecarlo.services import db as db_module
     monkeypatch.setattr(db_module.database, 'db', database)
     monkeypatch.setattr(session_liveness, 'jh', SimpleNamespace(is_unit_testing=lambda: False))
     monkeypatch.setattr(runner_queue, 'jh', SimpleNamespace(is_unit_testing=lambda: False))
@@ -400,14 +400,14 @@ def test_a_lost_runners_job_is_queued_again_until_its_attempts_run_out(pg, proje
         job = _claim(f'runner{attempt}')
         session_liveness.claim('backtest', session_id, mark_running=True, claim_id=job['claim_id'])
         BacktestSession.update(heartbeat_at=lapsed).where(BacktestSession.id == session_id).execute()
-        from jesse.models.BacktestSession import get_backtest_session_by_id
+        from montecarlo.models.BacktestSession import get_backtest_session_by_id
         assert get_backtest_session_by_id(session_id).status == 'queued'
         assert 'stopped answering' in RunnerJob.get(RunnerJob.session_id == session_id).error
 
     job = _claim('runner3')
     session_liveness.claim('backtest', session_id, mark_running=True, claim_id=job['claim_id'])
     BacktestSession.update(heartbeat_at=lapsed).where(BacktestSession.id == session_id).execute()
-    from jesse.models.BacktestSession import get_backtest_session_by_id
+    from montecarlo.models.BacktestSession import get_backtest_session_by_id
     assert get_backtest_session_by_id(session_id).status == 'stopped'
     row = RunnerJob.get(RunnerJob.session_id == session_id)
     assert row.status == 'failed' and 'Lost its runner (runner3) 3 times' in row.error
@@ -536,7 +536,7 @@ def test_only_runners_with_cores_on_this_version_count_for_auto(pg):
 
 
 def _optimization_request(session_id, where=None):
-    from jesse.services.web import OptimizationRequestJson
+    from montecarlo.services.web import OptimizationRequestJson
     return OptimizationRequestJson(
         id=session_id, exchange='Binance Spot', routes=[{'exchange': 'Binance Spot', 'strategy': 'S', 'symbol': 'BTC-USDT',
                                                          'timeframe': '4h'}], data_routes=[], config={},
@@ -549,7 +549,7 @@ def _optimization_request(session_id, where=None):
 @pytest.mark.parametrize('route', ['resume_optimization', 'rerun_optimization'])
 def test_a_queued_optimization_is_not_started_twice(monkeypatch, route):
     import asyncio
-    from jesse.controllers import optimization_controller as controller
+    from montecarlo.controllers import optimization_controller as controller
     calls = []
     monkeypatch.setattr(controller.jh, 'validate_cwd', lambda: None)
     monkeypatch.setattr(controller, 'get_optimization_session_by_id_from_db',
@@ -565,7 +565,7 @@ def test_a_queued_optimization_is_not_started_twice(monkeypatch, route):
 
 def test_a_rerun_that_cannot_be_queued_stops_with_the_reason(monkeypatch):
     import asyncio
-    from jesse.controllers import optimization_controller as controller
+    from montecarlo.controllers import optimization_controller as controller
     statuses, exceptions = [], []
     monkeypatch.setattr(controller.jh, 'validate_cwd', lambda: None)
     monkeypatch.setattr(controller, 'get_optimization_session_by_id_from_db',
@@ -660,7 +660,7 @@ def test_runners_report_how_busy_their_machine_is(pg):
 
 def test_machine_stats_work_without_psutil(monkeypatch):
     import builtins
-    from jesse.services import machine_stats
+    from montecarlo.services import machine_stats
     real_import = builtins.__import__
 
     def no_psutil(name, *args, **kwargs):
@@ -677,7 +677,7 @@ def test_machine_stats_work_without_psutil(monkeypatch):
 
 
 def test_a_job_folder_sees_the_runner_projects_env(tmp_path):
-    from jesse.services.runner import Runner as RunnerLoop
+    from montecarlo.services.runner import Runner as RunnerLoop
     project_dir, job_dir = tmp_path / 'project', tmp_path / 'project/storage/runner/jobs/x'
     job_dir.mkdir(parents=True)
     (project_dir / '.env').write_text('POSTGRES_HOST=db\n')
@@ -691,11 +691,11 @@ def test_a_job_folder_sees_the_runner_projects_env(tmp_path):
 
 
 def test_a_version_mismatch_stops_a_standalone_runner_and_pauses_one_inside_jesse_run(pg, monkeypatch):
-    from jesse.services.runner import Runner as RunnerLoop
+    from montecarlo.services.runner import Runner as RunnerLoop
     Runner.insert(name='macbook', host='macbook', role='hub', cores_budget=1, cores_used=0, cpu_cores=16, jesse_version='9.9.9',
                   started_at=_now(), last_seen=_now()).execute()
     printed = []
-    monkeypatch.setattr('jesse.services.runner._log', lambda text, level='info': printed.append((level, text)))
+    monkeypatch.setattr('montecarlo.services.runner._log', lambda text, level='info': printed.append((level, text)))
 
     standalone = RunnerLoop('mini', 2, hub=False, standalone=True)
     standalone._check_version()
@@ -714,7 +714,7 @@ def test_a_version_mismatch_stops_a_standalone_runner_and_pauses_one_inside_jess
 
 
 def test_a_runner_that_stops_shows_as_recently_offline_and_survives_cleanup(pg, project, monkeypatch):
-    from jesse.services.runner import Runner as RunnerLoop
+    from montecarlo.services.runner import Runner as RunnerLoop
     monkeypatch.chdir(project)
     loop = RunnerLoop('mini', 2, hub=False, standalone=True)
     loop._heartbeat()
@@ -803,8 +803,8 @@ def test_the_order_decides_which_runner_waits_for_a_big_job(pg, project, monkeyp
 # ---------------------------------------------------------------------------
 
 def _runner_with_claimed_job(project, tmp_path, monkeypatch):
-    from jesse.services import runner as runner_module
-    from jesse.services.multiprocessing import process_manager
+    from montecarlo.services import runner as runner_module
+    from montecarlo.services.multiprocessing import process_manager
 
     session_id = _backtest()
     _enqueue(project, session_id)

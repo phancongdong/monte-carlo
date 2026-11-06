@@ -1,8 +1,8 @@
-from jesse.config import config, reset_config
-from jesse.enums import exchanges
-from jesse.store import store
-from jesse.routes import router
-from jesse.services import exchange_service, order_service, position_service
+from montecarlo.config import config, reset_config
+from montecarlo.enums import exchanges
+from montecarlo.store import store
+from montecarlo.routes import router
+from montecarlo.services import exchange_service, order_service, position_service
 
 
 def set_up():

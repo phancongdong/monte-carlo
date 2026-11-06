@@ -1,23 +1,23 @@
 import math
-from jesse.services import candle_service
+from montecarlo.services import candle_service
 import numpy as np
 import pytest
 
-import jesse.helpers as jh
-from jesse import research
-from jesse import exceptions
-from jesse.config import reset_config
-from jesse.enums import exchanges, timeframes, order_types
-from jesse.factories import range_candles, candles_from_close_prices
-from jesse.models import ClosedTrade
-from jesse.models.Order import Order
-from jesse.modes import backtest_mode
-from jesse.routes import router
-from jesse.store import store
-from jesse.strategies import Strategy
+import montecarlo.helpers as jh
+from montecarlo import research
+from montecarlo import exceptions
+from montecarlo.config import reset_config
+from montecarlo.enums import exchanges, timeframes, order_types
+from montecarlo.factories import range_candles, candles_from_close_prices
+from montecarlo.models import ClosedTrade
+from montecarlo.models.Order import Order
+from montecarlo.modes import backtest_mode
+from montecarlo.routes import router
+from montecarlo.store import store
+from montecarlo.strategies import Strategy
 from tests.data import test_candles_0
 from tests.data import test_candles_1
-from jesse.testing_utils import set_up, single_route_backtest, two_routes_backtest, two_data_routes_backtest
+from montecarlo.testing_utils import set_up, single_route_backtest, two_routes_backtest, two_data_routes_backtest
 
 
 def test_average_stop_loss_exception():
@@ -1017,7 +1017,7 @@ def test_before_terminate2():
 def test_terminate():
     single_route_backtest('TestTerminate')
 
-    from jesse.store import store
+    from montecarlo.store import store
     assert store.app.starting_time == 1
 
 
@@ -1036,7 +1036,7 @@ def test_chart_values():
 
 
 def test_invalid_chart_values_are_logged_once_until_recovery(monkeypatch):
-    import jesse.services.logger as logger
+    import montecarlo.services.logger as logger
 
     single_route_backtest('TestStrategyChartsReport')
     strategy = router.routes[0].strategy
@@ -1065,7 +1065,7 @@ def test_invalid_chart_values_are_logged_once_until_recovery(monkeypatch):
 
 
 def test_every_chart_method_logs_non_finite_values(monkeypatch):
-    import jesse.services.logger as logger
+    import montecarlo.services.logger as logger
 
     single_route_backtest('TestStrategyChartsReport')
     strategy = router.routes[0].strategy
@@ -1096,7 +1096,7 @@ def test_strategy_charts_report():
     # (last point per line, published on every dashboard tick)
     single_route_backtest('TestStrategyChartsReport')
 
-    from jesse.services import report
+    from montecarlo.services import report
 
     key = jh.key(exchanges.SANDBOX, 'BTC-USDT', timeframes.MINUTE_1)
 
@@ -1120,7 +1120,7 @@ def test_strategy_charts_report():
 def test_live_chart_line_data_is_capped(monkeypatch):
     # live sessions never end, so chart-line arrays must not grow unbounded;
     # backtests keep their full history
-    from jesse.strategies.Strategy import LIVE_CHART_MAX_POINTS_PER_LINE
+    from montecarlo.strategies.Strategy import LIVE_CHART_MAX_POINTS_PER_LINE
 
     assert LIVE_CHART_MAX_POINTS_PER_LINE == 1_000
 
@@ -1142,7 +1142,7 @@ def test_live_chart_line_data_is_capped(monkeypatch):
 
 
 def test_live_chart_add_methods_keep_the_latest_points(monkeypatch):
-    from jesse.strategies.Strategy import LIVE_CHART_MAX_POINTS_PER_LINE
+    from montecarlo.strategies.Strategy import LIVE_CHART_MAX_POINTS_PER_LINE
 
     single_route_backtest('TestStrategyChartsReport')
     strategy = router.routes[0].strategy

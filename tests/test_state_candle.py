@@ -3,15 +3,15 @@ import numpy as np
 import pytest
 from types import SimpleNamespace
 
-from jesse.config import config, reset_config
-from jesse.factories import fake_candle, range_candles
-from jesse.services import candle_service
-from jesse.store import store
+from montecarlo.config import config, reset_config
+from montecarlo.factories import fake_candle, range_candles
+from montecarlo.services import candle_service
+from montecarlo.store import store
 
 
 def set_up():
     reset_config()
-    from jesse.routes import router
+    from montecarlo.routes import router
     router.set_routes([
         {'exchange': 'Sandbox', 'symbol': 'BTC-USD', 'timeframe': '1m', 'strategy': 'Test01'}
     ])
@@ -204,7 +204,7 @@ def test_warmup_injection_generates_exact_5m_15m_and_1h_candles():
 
 def test_multiple_symbols_and_data_route_timeframes_remain_isolated():
     reset_config()
-    from jesse.routes import router
+    from montecarlo.routes import router
 
     # The trading route and data route intentionally use different symbols and
     # timeframes to catch storage-key leakage between route types.

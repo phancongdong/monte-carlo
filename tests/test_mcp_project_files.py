@@ -9,13 +9,13 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-import jesse.mcp.tools.services.project_files as project_files_service
-from jesse.controllers import project_files_controller, research_scripts_controller, strategy_controller
-from jesse.mcp import server as mcp_server
-from jesse.mcp.agent_rules import _load_packaged_rules
-from jesse.mcp.resources import register_resources
-from jesse.mcp.tools import register_tools
-from jesse.services import auth, project_files
+import montecarlo.mcp.tools.services.project_files as project_files_service
+from montecarlo.controllers import project_files_controller, research_scripts_controller, strategy_controller
+from montecarlo.mcp import server as mcp_server
+from montecarlo.mcp.agent_rules import _load_packaged_rules
+from montecarlo.mcp.resources import register_resources
+from montecarlo.mcp.tools import register_tools
+from montecarlo.services import auth, project_files
 from tests.mcp_tool_adapters import callable_tool
 
 
@@ -795,11 +795,11 @@ def forward_to_api(api, monkeypatch):
     calls = []
 
     def forward_post(url, json=None, headers=None, timeout=None):
-        assert url.startswith('http://jesse.test/')
+        assert url.startswith('http://montecarlo.test/')
         calls.append({'url': url, 'json': json, 'timeout': timeout})
-        return api.post(url.removeprefix('http://jesse.test'), json=json, headers=headers)
+        return api.post(url.removeprefix('http://montecarlo.test'), json=json, headers=headers)
 
-    monkeypatch.setattr(project_files_service.mcp_config, 'JESSE_API_URL', 'http://jesse.test')
+    monkeypatch.setattr(project_files_service.mcp_config, 'JESSE_API_URL', 'http://montecarlo.test')
     monkeypatch.setattr(project_files_service.mcp_config, 'JESSE_PASSWORD', PASSWORD)
     monkeypatch.setattr(project_files_service.requests, 'post', forward_post)
     return calls

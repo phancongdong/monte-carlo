@@ -2,10 +2,10 @@ from types import SimpleNamespace
 
 import pytest
 
-import jesse.store.state_app as state_app
-from jesse.services import order_service
-from jesse.store import store
-from jesse.store.state_app import AppState
+import montecarlo.store.state_app as state_app
+from montecarlo.services import order_service
+from montecarlo.store import store
+from montecarlo.store.state_app import AppState
 
 
 def stored_keys(monkeypatch, keys):

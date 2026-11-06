@@ -2,13 +2,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import jesse.helpers as jh
-from jesse import research
-from jesse.factories import candles_from_close_prices
-from jesse.services import metrics
-from jesse.store import store
-from jesse.strategies import Strategy
-from jesse.testing_utils import single_route_backtest
+import montecarlo.helpers as jh
+from montecarlo import research
+from montecarlo.factories import candles_from_close_prices
+from montecarlo.services import metrics
+from montecarlo.store import store
+from montecarlo.strategies import Strategy
+from montecarlo.testing_utils import single_route_backtest
 
 
 EXCHANGE = 'Sandbox'

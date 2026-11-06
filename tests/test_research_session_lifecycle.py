@@ -4,22 +4,22 @@ from types import SimpleNamespace
 
 import pytest
 
-from jesse import exceptions
-from jesse.services.ray_runtime import UnsupportedRayVersionError
+from montecarlo import exceptions
+from montecarlo.services.ray_runtime import UnsupportedRayVersionError
 
 
-multiprocessing_service = import_module('jesse.services.multiprocessing')
-significance_package = import_module('jesse.research.rule_significance_testing')
+multiprocessing_service = import_module('montecarlo.services.multiprocessing')
+significance_package = import_module('montecarlo.research.rule_significance_testing')
 significance_runner_module = import_module(
-    'jesse.modes.significance_test_mode.SignificanceTestRunner'
+    'montecarlo.modes.significance_test_mode.SignificanceTestRunner'
 )
-significance_mode = import_module('jesse.modes.significance_test_mode')
+significance_mode = import_module('montecarlo.modes.significance_test_mode')
 monte_carlo_runner_module = import_module(
-    'jesse.modes.monte_carlo_mode.MonteCarloRunner'
+    'montecarlo.modes.monte_carlo_mode.MonteCarloRunner'
 )
-monte_carlo_mode = import_module('jesse.modes.monte_carlo_mode')
-optimizer_module = import_module('jesse.modes.optimize_mode.Optimize')
-optimize_mode = import_module('jesse.modes.optimize_mode')
+monte_carlo_mode = import_module('montecarlo.modes.monte_carlo_mode')
+optimizer_module = import_module('montecarlo.modes.optimize_mode.Optimize')
+optimize_mode = import_module('montecarlo.modes.optimize_mode')
 
 
 def test_process_marker_exists_before_worker_starts(monkeypatch):
@@ -576,7 +576,7 @@ def test_optimizer_failure_is_persisted_once_and_cancels_only_its_work(monkeypat
         'update_optimization_session_status',
         lambda session_id, status: events.append(('status', status)),
     )
-    optimization_model = import_module('jesse.models.OptimizationSession')
+    optimization_model = import_module('montecarlo.models.OptimizationSession')
     monkeypatch.setattr(
         optimization_model,
         'add_session_exception',
@@ -605,7 +605,7 @@ def test_significance_mode_does_not_duplicate_runner_failure(monkeypatch):
             failures.append('runner')
             raise RuntimeError('runner owns this failure')
 
-    monkeypatch.setattr('jesse.config.set_config', lambda config: None)
+    monkeypatch.setattr('montecarlo.config.set_config', lambda config: None)
     monkeypatch.setattr(significance_mode.router, 'initiate', lambda routes, data_routes: None)
     monkeypatch.setattr(significance_mode.router, 'routes', [])
     monkeypatch.setattr(significance_mode.store.app, 'set_session_id', lambda value: None)
@@ -665,7 +665,7 @@ def test_monte_carlo_mode_does_not_duplicate_runner_failure(monkeypatch):
             failures.append('runner')
             raise RuntimeError('runner owns this failure')
 
-    monkeypatch.setattr('jesse.config.set_config', lambda config: None)
+    monkeypatch.setattr('montecarlo.config.set_config', lambda config: None)
     monkeypatch.setattr(monte_carlo_mode.router, 'initiate', lambda routes, data_routes: None)
     monkeypatch.setattr(monte_carlo_mode.router, 'routes', [])
     monkeypatch.setattr(monte_carlo_mode.store.app, 'set_session_id', lambda value: None)
@@ -734,7 +734,7 @@ def test_optimize_mode_does_not_duplicate_optimizer_failure(monkeypatch):
             failures.append('optimizer')
             raise RuntimeError('optimizer owns this failure')
 
-    monkeypatch.setattr('jesse.config.set_config', lambda config: None)
+    monkeypatch.setattr('montecarlo.config.set_config', lambda config: None)
     monkeypatch.setattr(optimize_mode.router, 'initiate', lambda routes, data_routes: None)
     monkeypatch.setattr(optimize_mode.router, 'routes', [])
     monkeypatch.setattr(optimize_mode.store.app, 'set_session_id', lambda value: None)
@@ -761,7 +761,7 @@ def test_optimize_mode_does_not_duplicate_optimizer_failure(monkeypatch):
         'update_optimization_session_state',
         lambda *args: None,
     )
-    optimization_model = import_module('jesse.models.OptimizationSession')
+    optimization_model = import_module('montecarlo.models.OptimizationSession')
     monkeypatch.setattr(
         optimization_model,
         'add_session_exception',

@@ -17,9 +17,9 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 
-from jesse.controllers import backtest_controller
-from jesse.models.BacktestSession import BacktestSession
-from jesse.services import auth, backtest_report, benchmark, charts, metrics, transformers
+from montecarlo.controllers import backtest_controller
+from montecarlo.models.BacktestSession import BacktestSession
+from montecarlo.services import auth, backtest_report, benchmark, charts, metrics, transformers
 
 DAY_MS = 86_400_000
 START = 1_672_531_200_000  # 2023-01-01
@@ -329,7 +329,7 @@ def test_the_logos_ship_with_the_package():
 
     assert os.path.exists(os.path.join(backtest_report.LOGO_FOLDER, backtest_report.LIGHT_COLORS.logo))
     assert os.path.exists(os.path.join(backtest_report.LOGO_FOLDER, backtest_report.DARK_COLORS.logo))
-    assert 'include jesse/services/report_assets/*.png' in open(manifest).read()
+    assert 'include montecarlo/services/report_assets/*.png' in open(manifest).read()
 
 
 def test_a_missing_image_is_drawn_and_the_rest_stay_images(pages, storage):

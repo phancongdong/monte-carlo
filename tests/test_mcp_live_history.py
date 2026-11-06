@@ -33,27 +33,27 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from mcp.types import CallToolResult, ImageContent, TextContent
 
-import jesse.mcp.tools.services.project_files as project_files_service
-import jesse.helpers as jh
-from jesse.controllers import analysis_controller, closed_trade_controller, session_results_controller
-from jesse.mcp import server as mcp_server
-from jesse.mcp.agent_rules import _load_packaged_rules
-from jesse.mcp.resources import register_resources
-from jesse.mcp.tools import register_tools
-from jesse.models.ClosedTrade import ClosedTrade
-from jesse.models.ExchangeApiKeys import ExchangeApiKeys
-from jesse.models.LiveEquitySnapshot import LiveEquitySnapshot
-from jesse.models.LiveSession import LiveSession
-from jesse.models.Log import Log
-from jesse.models.NotificationApiKeys import NotificationApiKeys
-from jesse.models.Order import Order
-from jesse.repositories import closed_trade_repository, live_session_repository, order_repository
-from jesse.repositories.closed_trade_repository import populate_order_arrays
-from jesse.services import nofollow_fs
-from jesse.services import analysis_jobs, auth, live_history, research_jobs, session_results
-from jesse.services.multiprocessing import process_manager
-from jesse.services.project_files import ProjectFileError
-from jesse.services.transformers import get_closed_trade_details
+import montecarlo.mcp.tools.services.project_files as project_files_service
+import montecarlo.helpers as jh
+from montecarlo.controllers import analysis_controller, closed_trade_controller, session_results_controller
+from montecarlo.mcp import server as mcp_server
+from montecarlo.mcp.agent_rules import _load_packaged_rules
+from montecarlo.mcp.resources import register_resources
+from montecarlo.mcp.tools import register_tools
+from montecarlo.models.ClosedTrade import ClosedTrade
+from montecarlo.models.ExchangeApiKeys import ExchangeApiKeys
+from montecarlo.models.LiveEquitySnapshot import LiveEquitySnapshot
+from montecarlo.models.LiveSession import LiveSession
+from montecarlo.models.Log import Log
+from montecarlo.models.NotificationApiKeys import NotificationApiKeys
+from montecarlo.models.Order import Order
+from montecarlo.repositories import closed_trade_repository, live_session_repository, order_repository
+from montecarlo.repositories.closed_trade_repository import populate_order_arrays
+from montecarlo.services import nofollow_fs
+from montecarlo.services import analysis_jobs, auth, live_history, research_jobs, session_results
+from montecarlo.services.multiprocessing import process_manager
+from montecarlo.services.project_files import ProjectFileError
+from montecarlo.services.transformers import get_closed_trade_details
 from tests.mcp_tool_adapters import callable_tool
 
 PASSWORD = 'live-history-password'
@@ -159,7 +159,7 @@ def workers(monkeypatch) -> set:
 
 
 class _RepositoryHelpers(types.SimpleNamespace):
-    """jesse.helpers for the dashboard's repositories, without the unit-test guard that skips the database."""
+    """montecarlo.helpers for the dashboard's repositories, without the unit-test guard that skips the database."""
 
     def __getattr__(self, name):
         return getattr(jh, name)
@@ -186,7 +186,7 @@ def api(project, db, plugin, clock, workers, monkeypatch) -> TestClient:
     app.include_router(session_results_controller.router)
     app.include_router(analysis_controller.router)
     app.include_router(closed_trade_controller.router)
-    from jesse.controllers import order_controller
+    from montecarlo.controllers import order_controller
     app.include_router(order_controller.router)
     return TestClient(app)
 
@@ -195,9 +195,9 @@ def api(project, db, plugin, clock, workers, monkeypatch) -> TestClient:
 def tools(api, monkeypatch) -> dict:
     """The registered MCP tools, whose HTTP services reach the test API."""
     def forward_post(url, json=None, headers=None, timeout=None):
-        return api.post(url.removeprefix('http://jesse.test'), json=json, headers=headers)
+        return api.post(url.removeprefix('http://montecarlo.test'), json=json, headers=headers)
 
-    monkeypatch.setattr(project_files_service.mcp_config, 'JESSE_API_URL', 'http://jesse.test')
+    monkeypatch.setattr(project_files_service.mcp_config, 'JESSE_API_URL', 'http://montecarlo.test')
     monkeypatch.setattr(project_files_service.mcp_config, 'JESSE_PASSWORD', PASSWORD)
     monkeypatch.setattr(project_files_service.requests, 'post', forward_post)
     mcp = FakeMCP()

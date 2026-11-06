@@ -6,8 +6,8 @@ from fastapi import FastAPI
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.testclient import TestClient
 
-from jesse.controllers import backtest_controller
-from jesse.services.web import (
+from montecarlo.controllers import backtest_controller
+from montecarlo.services.web import (
     GetBacktestSessionChartDataRequestJson,
     fastapi_app,
 )

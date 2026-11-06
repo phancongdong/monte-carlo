@@ -1,6 +1,6 @@
-from jesse.mcp.agent_rules import _load_packaged_rules
-from jesse.mcp.resources import register_resources
-from jesse.mcp.tools.strategy import register_strategy_tools
+from montecarlo.mcp.agent_rules import _load_packaged_rules
+from montecarlo.mcp.resources import register_resources
+from montecarlo.mcp.tools.strategy import register_strategy_tools
 
 
 class FakeMCP:
@@ -104,9 +104,9 @@ def test_strategy_resource_documents_the_trading_hours_api():
 
 
 def test_documented_trading_hours_names_exist_in_the_real_api():
-    from jesse import utils
-    from jesse.services.trading_hours import _ALLOWED_KEYS
-    from jesse.strategies import Strategy
+    from montecarlo import utils
+    from montecarlo.services.trading_hours import _ALLOWED_KEYS
+    from montecarlo.strategies import Strategy
 
     assert callable(utils.filter_candles_by_hours)
     assert callable(utils.is_in_trading_hours)
@@ -142,7 +142,7 @@ def test_candle_docs_state_that_only_one_minute_candles_are_imported():
     assert 'Timeframes are never imported' in candle
     assert 'timeframes are imported automatically' not in candle.lower()
 
-    from jesse.mcp.tools import candles as candle_tools
+    from montecarlo.mcp.tools import candles as candle_tools
     import inspect
 
     source = inspect.getsource(candle_tools)

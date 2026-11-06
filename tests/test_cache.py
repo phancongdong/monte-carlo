@@ -3,7 +3,7 @@ import os
 import pickle
 import time
 
-from jesse.services.cache import INDEX_NAME, Cache
+from montecarlo.services.cache import INDEX_NAME, Cache
 
 
 def _fill(path, prefix, count):

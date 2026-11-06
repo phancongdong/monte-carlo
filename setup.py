@@ -6,15 +6,15 @@ from setuptools import setup, find_packages
 DESCRIPTION = "A quantitative trading and Monte Carlo simulation framework"
 BASE_DIR = Path(__file__).resolve().parent
 
-# The version lives only in jesse/version.py. It is read as text because importing the package
+# The version lives only in montecarlo/version.py. It is read as text because importing the package
 # would import dependencies during the build.
 _version_match = re.search(
     r"^__version__\s*=\s*['\"]([^'\"]+)['\"]",
-    (BASE_DIR / "jesse" / "version.py").read_text(encoding="utf-8"),
+    (BASE_DIR / 'montecarlo' / "version.py").read_text(encoding="utf-8"),
     re.MULTILINE,
 )
 if not _version_match:
-    raise RuntimeError("Could not find __version__ in jesse/version.py")
+    raise RuntimeError("Could not find __version__ in montecarlo/version.py")
 VERSION = _version_match.group(1)
 
 with open(BASE_DIR / "requirements.txt", "r", encoding="utf-8") as f:
@@ -33,7 +33,8 @@ setup(
     install_requires=REQUIRED_PACKAGES,
     entry_points='''
         [console_scripts]
-        jesse=jesse.cli:cli
+        montecarlo=montecarlo.cli:cli
+        mc=montecarlo.cli:cli
     ''',
     classifiers=[
         "Programming Language :: Python :: 3",

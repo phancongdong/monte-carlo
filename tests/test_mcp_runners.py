@@ -7,18 +7,18 @@ from types import SimpleNamespace
 
 import pytest
 
-import jesse.mcp.mcp_config as mcp_config
-from jesse.mcp.tools.backtest import register_backtest_tools
-from jesse.mcp.tools.services import backtest as backtest_service
-from jesse.mcp.tools.services import monte_carlo as monte_carlo_service
-from jesse.mcp.tools.services import optimization as optimization_service
-from jesse.mcp.tools.services import session_wait
-from jesse.mcp.tools.services import session_config
-from jesse.mcp.tools.services import significance_test as significance_test_service
-from jesse.mcp.tools.session_results import register_session_results_tools
+import montecarlo.mcp.mcp_config as mcp_config
+from montecarlo.mcp.tools.backtest import register_backtest_tools
+from montecarlo.mcp.tools.services import backtest as backtest_service
+from montecarlo.mcp.tools.services import monte_carlo as monte_carlo_service
+from montecarlo.mcp.tools.services import optimization as optimization_service
+from montecarlo.mcp.tools.services import session_wait
+from montecarlo.mcp.tools.services import session_config
+from montecarlo.mcp.tools.services import significance_test as significance_test_service
+from montecarlo.mcp.tools.session_results import register_session_results_tools
 
 # Imported by its full name: a star import in the services package shadows the attribute name.
-project_files = importlib.import_module('jesse.mcp.tools.services.project_files')
+project_files = importlib.import_module('montecarlo.mcp.tools.services.project_files')
 
 SID = 'draft-id'
 FUTURES = 'Binance Perpetual Futures'
@@ -92,8 +92,8 @@ def _drafted(monkeypatch, name: str):
     created = getattr(service, creator)(exchange=FUTURES, routes=ROUTES)
     assert created['status'] == 'success', created
     if name == 'optimization_rerun':
-        jesse.status = 'finished'
-    jesse.posts.clear()
+        montecarlo.status = 'finished'
+    montecarlo.posts.clear()
     return jesse, getattr(service, runner), session_type
 
 
@@ -121,7 +121,7 @@ def test_where_defaults_to_auto_and_is_sent_with_the_start(monkeypatch, name):
     run(SID)
     run(SID, where='  macmini ')
 
-    assert [payload['where'] for payload in jesse.starts()] == ['auto', 'macmini']
+    assert [payload['where'] for payload in montecarlo.starts()] == ['auto', 'macmini']
 
 
 @pytest.mark.parametrize('name', ['backtest', 'significance_test'])
@@ -132,7 +132,7 @@ def test_chart_producing_runs_leave_the_theme_to_jesse(monkeypatch, name):
 
     run(SID)
 
-    assert jesse.starts()[0].get('theme') is None
+    assert montecarlo.starts()[0].get('theme') is None
 
 
 @pytest.mark.parametrize('name', sorted(RUNS))
@@ -144,7 +144,7 @@ def test_an_invalid_where_is_refused_before_calling_jesse(monkeypatch, name, whe
 
     assert result['status'] == 'error' and result['error_type'] == 'invalid_request'
     assert 'list_runners' in result['message']
-    assert jesse.posts == []
+    assert montecarlo.posts == []
 
 
 def test_the_run_tool_refuses_an_invalid_where_before_metering(monkeypatch):
@@ -159,7 +159,7 @@ def test_the_run_tool_refuses_an_invalid_where_before_metering(monkeypatch):
 
     register_backtest_tools(Registrar())
     called = []
-    monkeypatch.setattr('jesse.mcp.tools.backtest.run_blocking', lambda *args, **kwargs: called.append(args))
+    monkeypatch.setattr('montecarlo.mcp.tools.backtest.run_blocking', lambda *args, **kwargs: called.append(args))
 
     result = asyncio.run(tools['run_backtest'](SID, where=' '))
 
@@ -173,7 +173,7 @@ def test_the_run_tool_refuses_an_invalid_where_before_metering(monkeypatch):
 @pytest.mark.parametrize('name', sorted(RUNS))
 def test_a_queued_start_returns_status_queued(monkeypatch, name):
     jesse, run, session_type = _drafted(monkeypatch, name)
-    jesse.start_reply = _reply(*_queued_body(name))
+    montecarlo.start_reply = _reply(*_queued_body(name))
 
     result = run(SID, where='macmini')
 
@@ -189,7 +189,7 @@ def test_a_queued_start_returns_status_queued(monkeypatch, name):
 @pytest.mark.parametrize('name', sorted(RUNS))
 def test_a_run_queued_for_any_runner_without_warning(monkeypatch, name):
     jesse, run, _ = _drafted(monkeypatch, name)
-    jesse.start_reply = _reply(*_queued_body(name, target='any', warning=False))
+    montecarlo.start_reply = _reply(*_queued_body(name, target='any', warning=False))
 
     result = run(SID, where='any')
 
@@ -203,9 +203,9 @@ def test_a_run_queued_for_any_runner_without_warning(monkeypatch, name):
 def test_a_local_start_still_reports_started(monkeypatch, name, body):
     jesse, run, session_type = _drafted(monkeypatch, name)
     if RUNS[name][6]:
-        jesse.start_reply = _reply(202, body)
+        montecarlo.start_reply = _reply(202, body)
     else:
-        jesse.start_reply = _reply(200, {'session': {'id': SID, 'status': 'running'}} if body else None)
+        montecarlo.start_reply = _reply(200, {'session': {'id': SID, 'status': 'running'}} if body else None)
 
     result = run(SID)
 
@@ -218,7 +218,7 @@ def test_a_local_start_still_reports_started(monkeypatch, name, body):
 @pytest.mark.parametrize('name', sorted(RUNS))
 def test_a_refused_where_shows_jesses_reason(monkeypatch, name):
     jesse, run, _ = _drafted(monkeypatch, name)
-    jesse.start_reply = _reply(400, {'error': 'No runner is named "nope". Known runners: macmini.'})
+    montecarlo.start_reply = _reply(400, {'error': 'No runner is named "nope". Known runners: macmini.'})
 
     result = run(SID, where='nope')
 
@@ -229,7 +229,7 @@ def test_a_refused_where_shows_jesses_reason(monkeypatch, name):
 @pytest.mark.parametrize('name', ['optimization', 'monte_carlo', 'significance_test'])
 def test_a_conflict_keeps_its_message_and_adds_jesses_reason(monkeypatch, name):
     jesse, run, _ = _drafted(monkeypatch, name)
-    jesse.start_reply = _reply(409, {'error': 'This session is already running on a runner.'})
+    montecarlo.start_reply = _reply(409, {'error': 'This session is already running on a runner.'})
 
     result = run(SID)
 
@@ -241,14 +241,14 @@ def test_a_conflict_keeps_its_message_and_adds_jesses_reason(monkeypatch, name):
 @pytest.mark.parametrize('name', ['optimization', 'optimization_rerun', 'monte_carlo', 'monte_carlo_resume'])
 def test_a_session_already_queued_is_not_queued_again(monkeypatch, name):
     jesse, run, session_type = _drafted(monkeypatch, name)
-    jesse.status = 'queued'
+    montecarlo.status = 'queued'
 
     result = run(SID)
 
     assert result['status'] == 'queued'
     assert result['dashboard_url'] == mcp_config.dashboard_url(session_type, SID)
     assert 'already queued' in result['message']
-    assert jesse.starts() == []
+    assert montecarlo.starts() == []
 
 
 # ---------------------------------------------------------------------------
@@ -274,7 +274,7 @@ def api(monkeypatch):
         calls.append((url, json, headers))
         return replies.pop(0)
 
-    monkeypatch.setattr(mcp_config, 'JESSE_API_URL', 'http://jesse.test')
+    monkeypatch.setattr(mcp_config, 'JESSE_API_URL', 'http://montecarlo.test')
     monkeypatch.setattr(mcp_config, 'JESSE_PASSWORD', 'secret')
     monkeypatch.setattr(project_files.requests, 'post', post)
     return SimpleNamespace(calls=calls, replies=replies)
@@ -285,7 +285,7 @@ def test_list_runners_reads_the_runners_route(api):
 
     result = session_wait.list_runners_service()
 
-    assert api.calls[0][0] == 'http://jesse.test/session-results/runners'
+    assert api.calls[0][0] == 'http://montecarlo.test/session-results/runners'
     assert api.calls[0][1] == {}
     assert result['status'] == 'success' and result['action'] == 'list_runners'
     assert (result['enabled'], result['hub_jesse_version'], result['queued_jobs']) == (True, '3.2.1', 2)
@@ -326,8 +326,8 @@ def test_list_runners_is_a_registered_read_only_tool(monkeypatch):
         seen.append(func)
         return func(*args, **kwargs)
 
-    monkeypatch.setattr('jesse.mcp.tools.session_results.run_blocking', run_blocking)
-    monkeypatch.setattr('jesse.mcp.tools.services.session_wait._call', lambda *args: {'status': 'success', 'runners': []})
+    monkeypatch.setattr('montecarlo.mcp.tools.session_results.run_blocking', run_blocking)
+    monkeypatch.setattr('montecarlo.mcp.tools.services.session_wait._call', lambda *args: {'status': 'success', 'runners': []})
 
     assert asyncio.run(tools['list_runners']()) == {'status': 'success', 'runners': []}
     assert seen[0].__name__ == 'list_runners_service'

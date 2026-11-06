@@ -6,13 +6,13 @@ from types import SimpleNamespace
 import pytest
 
 
-optimization_model = import_module('jesse.models.OptimizationSession')
-optimization_mode = import_module('jesse.modes.optimize_mode')
-optimization_controller = import_module('jesse.controllers.optimization_controller')
-monte_carlo_model = import_module('jesse.models.MonteCarloSession')
-monte_carlo_mode = import_module('jesse.modes.monte_carlo_mode')
-monte_carlo_controller = import_module('jesse.controllers.monte_carlo_controller')
-transformers = import_module('jesse.services.transformers')
+optimization_model = import_module('montecarlo.models.OptimizationSession')
+optimization_mode = import_module('montecarlo.modes.optimize_mode')
+optimization_controller = import_module('montecarlo.controllers.optimization_controller')
+monte_carlo_model = import_module('montecarlo.models.MonteCarloSession')
+monte_carlo_mode = import_module('montecarlo.modes.monte_carlo_mode')
+monte_carlo_controller = import_module('montecarlo.controllers.monte_carlo_controller')
+transformers = import_module('montecarlo.services.transformers')
 
 
 def test_monte_carlo_summary_metrics_allow_zero_valid_scenarios():
@@ -56,7 +56,7 @@ def test_orphaned_worker_session_is_reconciled_as_stopped(
     status_updates = []
 
     monkeypatch.setattr(model.jh, 'is_unit_testing', lambda: False)
-    monkeypatch.setattr('jesse.services.redis.is_process_active', lambda session_id: False)
+    monkeypatch.setattr('montecarlo.services.redis.is_process_active', lambda session_id: False)
     monkeypatch.setattr(
         model,
         update_name,
@@ -160,7 +160,7 @@ def test_monte_carlo_validation_failure_stops_parent_and_child(monkeypatch):
     status_updates = []
     exceptions = []
 
-    monkeypatch.setattr('jesse.config.set_config', lambda config: None)
+    monkeypatch.setattr('montecarlo.config.set_config', lambda config: None)
     monkeypatch.setattr(monte_carlo_mode.router, 'initiate', lambda routes, data_routes: None)
     monkeypatch.setattr(monte_carlo_mode.store.app, 'set_session_id', lambda value: None)
     monkeypatch.setattr(monte_carlo_mode, 'register_custom_exception_handler', lambda: None)

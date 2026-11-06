@@ -3,13 +3,13 @@ from urllib.parse import SplitResult
 
 import pytest
 
-import jesse.mcp.mcp_config as mcp_config
-import jesse.services.dashboard_url as dashboard_url_module
-from jesse.mcp.tools.services import backtest as backtest_service
-from jesse.mcp.tools.services import monte_carlo as monte_carlo_service
-from jesse.mcp.tools.services import optimization as optimization_service
-from jesse.mcp.tools.services import significance_test as significance_test_service
-from jesse.services.dashboard_url import (
+import montecarlo.mcp.mcp_config as mcp_config
+import montecarlo.services.dashboard_url as dashboard_url_module
+from montecarlo.mcp.tools.services import backtest as backtest_service
+from montecarlo.mcp.tools.services import monte_carlo as monte_carlo_service
+from montecarlo.mcp.tools.services import optimization as optimization_service
+from montecarlo.mcp.tools.services import significance_test as significance_test_service
+from montecarlo.services.dashboard_url import (
     InvalidDashboardUrlError,
     default_dashboard_url,
     internal_api_url,
@@ -40,8 +40,8 @@ def test_resolve_dashboard_url_defaults_and_overrides(env_values, bind_host, exp
     ('value', 'expected'),
     [
         ('http://192.168.1.20:9000', 'http://192.168.1.20:9000'),
-        ('  HTTPS://Jesse.Example.COM/  ', 'https://jesse.example.com'),
-        ('https://jesse.example.com:8443', 'https://jesse.example.com:8443'),
+        ('  HTTPS://Jesse.Example.COM/  ', 'https://montecarlo.example.com'),
+        ('https://montecarlo.example.com:8443', 'https://montecarlo.example.com:8443'),
         ('http://[FD00::10]:9000/', 'http://[fd00::10]:9000'),
         ('http://[::1]:9000', 'http://[::1]:9000'),
         ('http://mac_mini.local:9000', 'http://mac_mini.local:9000'),
@@ -62,7 +62,7 @@ def test_normalize_dashboard_url_accepts_origins(value, expected):
         ('ftp://mini.local', 'http:// or https://'),
         ('http://', 'no host'),
         ('http://mini.local/jesse', 'without a path'),
-        ('http://mini.local/jesse/', 'without a path'),
+        ('http://mini.local/montecarlo/', 'without a path'),
         ('http://mini.local//', 'without a path'),
         ('http://mini.local/?x=1', 'query or fragment'),
         ('http://mini.local/#/backtest', 'query or fragment'),
@@ -152,7 +152,7 @@ def test_default_dashboard_url_matches_historical_localhost_link():
         ({}, 'http://localhost:9000/#/live/abc-123'),
         ({'APP_PORT': '9005'}, 'http://localhost:9005/#/live/abc-123'),
         ({'APP_HOST': '192.168.1.20', 'APP_PORT': '9005'}, 'http://192.168.1.20:9005/#/live/abc-123'),
-        ({'APP_PORT': '9005', 'DASHBOARD_URL': 'https://jesse.example.com/'}, 'https://jesse.example.com/#/live/abc-123'),
+        ({'APP_PORT': '9005', 'DASHBOARD_URL': 'https://montecarlo.example.com/'}, 'https://montecarlo.example.com/#/live/abc-123'),
     ],
 )
 def test_live_session_url_matches_the_dashboard_address_jesse_run_prints(env_values, expected):
@@ -169,7 +169,7 @@ def test_live_session_url_escapes_the_session_id():
 
 
 def test_mcp_endpoint_is_derived_from_the_dashboard_origin():
-    assert mcp_endpoint_url('https://jesse.example.com') == 'https://jesse.example.com/mcp'
+    assert mcp_endpoint_url('https://montecarlo.example.com') == 'https://montecarlo.example.com/mcp'
     assert mcp_endpoint_url('http://[fd00::10]:9000') == 'http://[fd00::10]:9000/mcp'
 
 
@@ -185,7 +185,7 @@ def test_mcp_endpoint_is_derived_from_the_dashboard_origin():
 )
 @pytest.mark.parametrize(
     'base',
-    ['http://localhost:9000', 'https://jesse.example.com', 'http://[fd00::10]:9000'],
+    ['http://localhost:9000', 'https://montecarlo.example.com', 'http://[fd00::10]:9000'],
 )
 def test_dashboard_links_use_public_origin_for_every_session_category(monkeypatch, category, route, base):
     monkeypatch.setattr(mcp_config, 'DASHBOARD_URL', base)
@@ -233,21 +233,21 @@ def test_session_tools_call_internal_api_but_link_to_public_dashboard(
 
     monkeypatch.setattr(mcp_config, 'JESSE_API_URL', 'http://127.0.0.1:9000')
     monkeypatch.setattr(mcp_config, 'JESSE_PASSWORD', 'test-password')
-    monkeypatch.setattr(mcp_config, 'DASHBOARD_URL', 'https://jesse.example.com')
+    monkeypatch.setattr(mcp_config, 'DASHBOARD_URL', 'https://montecarlo.example.com')
     monkeypatch.setattr(service.requests, 'post', fake_post)
 
     result = getattr(service, function_name)('session-id')
 
     assert requested_urls == [f'http://127.0.0.1:9000/{api_path}/sessions/session-id']
-    assert result['dashboard_url'] == f'https://jesse.example.com/#/{route}/session-id'
+    assert result['dashboard_url'] == f'https://montecarlo.example.com/#/{route}/session-id'
 
 
 def test_session_rows_get_their_own_dashboard_link(monkeypatch):
-    monkeypatch.setattr(mcp_config, 'DASHBOARD_URL', 'https://jesse.example.com')
+    monkeypatch.setattr(mcp_config, 'DASHBOARD_URL', 'https://montecarlo.example.com')
     rows = [{'id': 'abc-123', 'title': 'one'}, {'title': 'no id'}, 'not a row']
 
     assert mcp_config.with_dashboard_urls('live', rows) == [
-        {'id': 'abc-123', 'title': 'one', 'dashboard_url': 'https://jesse.example.com/#/live/abc-123'},
+        {'id': 'abc-123', 'title': 'one', 'dashboard_url': 'https://montecarlo.example.com/#/live/abc-123'},
         {'title': 'no id', 'dashboard_url': ''},
         'not a row',
     ]
@@ -256,9 +256,9 @@ def test_session_rows_get_their_own_dashboard_link(monkeypatch):
 
 
 def test_dashboard_link_template_keeps_a_literal_session_id_placeholder(monkeypatch):
-    monkeypatch.setattr(mcp_config, 'DASHBOARD_URL', 'https://jesse.example.com')
+    monkeypatch.setattr(mcp_config, 'DASHBOARD_URL', 'https://montecarlo.example.com')
     template = mcp_config.dashboard_url_template('live')
-    assert template == 'https://jesse.example.com/#/live/{session_id}'
+    assert template == 'https://montecarlo.example.com/#/live/{session_id}'
     assert template.replace('{session_id}', 'abc-123') == mcp_config.dashboard_url('live', 'abc-123')
     assert mcp_config.dashboard_url_template('unknown') == ''
 
@@ -277,7 +277,7 @@ SESSION_SERVICES = [
 def _fake_api(monkeypatch, service, status_code: int, payload: dict) -> None:
     monkeypatch.setattr(mcp_config, 'JESSE_API_URL', 'http://127.0.0.1:9000')
     monkeypatch.setattr(mcp_config, 'JESSE_PASSWORD', 'test-password')
-    monkeypatch.setattr(mcp_config, 'DASHBOARD_URL', 'https://jesse.example.com')
+    monkeypatch.setattr(mcp_config, 'DASHBOARD_URL', 'https://montecarlo.example.com')
     monkeypatch.setattr(
         service.requests, 'post',
         lambda _url, **_kwargs: SimpleNamespace(status_code=status_code, text='', json=lambda: payload),
@@ -291,7 +291,7 @@ def test_session_lists_link_every_row_to_the_public_dashboard(monkeypatch, servi
     result = getattr(service, f'get_{name}_sessions_service')()
 
     assert [row['dashboard_url'] for row in result['sessions']] == [
-        f'https://jesse.example.com/#/{route}/first', f'https://jesse.example.com/#/{route}/second',
+        f'https://montecarlo.example.com/#/{route}/first', f'https://montecarlo.example.com/#/{route}/second',
     ]
 
 
@@ -302,7 +302,7 @@ def test_cancelling_a_session_still_returns_its_dashboard_link(monkeypatch, serv
     result = getattr(service, f'cancel_{name}_service')('session-id')
 
     assert result['status'] == 'success'
-    assert result['dashboard_url'] == f'https://jesse.example.com/#/{route}/session-id'
+    assert result['dashboard_url'] == f'https://montecarlo.example.com/#/{route}/session-id'
 
 
 @pytest.mark.parametrize(
@@ -323,4 +323,4 @@ def test_other_single_session_reads_and_actions_return_the_dashboard_link(
     result = getattr(service, function_name)('session-id')
 
     assert result['status'] == 'success'
-    assert result['dashboard_url'] == f'https://jesse.example.com/#/{route}/session-id'
+    assert result['dashboard_url'] == f'https://montecarlo.example.com/#/{route}/session-id'

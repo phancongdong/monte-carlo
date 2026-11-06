@@ -22,15 +22,15 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from mcp.types import CallToolResult, ImageContent, TextContent
 
-import jesse.mcp.tools.services.project_files as project_files_service
-from jesse.controllers import analysis_controller, research_scripts_controller
+import montecarlo.mcp.tools.services.project_files as project_files_service
+from montecarlo.controllers import analysis_controller, research_scripts_controller
 from tests.conftest import process_exited
-from jesse.mcp import server as mcp_server
-from jesse.mcp.agent_rules import _load_packaged_rules
-from jesse.mcp.resources import register_resources
-from jesse.mcp.tools import register_tools
-from jesse.mcp.tools.analysis import artifact_result
-from jesse.services import analysis_jobs, auth, nofollow_fs, research_jobs, session_results
+from montecarlo.mcp import server as mcp_server
+from montecarlo.mcp.agent_rules import _load_packaged_rules
+from montecarlo.mcp.resources import register_resources
+from montecarlo.mcp.tools import register_tools
+from montecarlo.mcp.tools.analysis import artifact_result
+from montecarlo.services import analysis_jobs, auth, nofollow_fs, research_jobs, session_results
 from tests.mcp_tool_adapters import callable_tool
 
 
@@ -843,9 +843,9 @@ def test_the_production_limits_match_the_documented_values():
 @pytest.fixture
 def forward_to_api(api, monkeypatch):
     def forward_post(url, json=None, headers=None, timeout=None):
-        return api.post(url.removeprefix('http://jesse.test'), json=json, headers=headers)
+        return api.post(url.removeprefix('http://montecarlo.test'), json=json, headers=headers)
 
-    monkeypatch.setattr(project_files_service.mcp_config, 'JESSE_API_URL', 'http://jesse.test')
+    monkeypatch.setattr(project_files_service.mcp_config, 'JESSE_API_URL', 'http://montecarlo.test')
     monkeypatch.setattr(project_files_service.mcp_config, 'JESSE_PASSWORD', PASSWORD)
     monkeypatch.setattr(project_files_service.requests, 'post', forward_post)
 

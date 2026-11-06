@@ -1,12 +1,12 @@
-import jesse.helpers as jh
-from jesse.config import reset_config
-from jesse.enums import exchanges
-from jesse.factories import candles_from_close_prices
-from jesse.models import ClosedTrade
-from jesse.routes import router
-from jesse.store import store
-from jesse.config import config
-from jesse.testing_utils import single_route_backtest
+import montecarlo.helpers as jh
+from montecarlo.config import reset_config
+from montecarlo.enums import exchanges
+from montecarlo.factories import candles_from_close_prices
+from montecarlo.models import ClosedTrade
+from montecarlo.routes import router
+from montecarlo.store import store
+from montecarlo.config import config
+from montecarlo.testing_utils import single_route_backtest
 
 
 def get_btc_candles():

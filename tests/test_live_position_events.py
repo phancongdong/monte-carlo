@@ -2,13 +2,13 @@ from types import SimpleNamespace
 
 import pytest
 
-import jesse.helpers as jh
-from jesse.enums import exchanges
-from jesse.routes import router
-from jesse.services import exchange_service, position_service
-from jesse.store import store
-from jesse.strategies import Strategy
-from jesse.testing_utils import set_up as configure_test
+import montecarlo.helpers as jh
+from montecarlo.enums import exchanges
+from montecarlo.routes import router
+from montecarlo.services import exchange_service, position_service
+from montecarlo.store import store
+from montecarlo.strategies import Strategy
+from montecarlo.testing_utils import set_up as configure_test
 
 
 class FakeStrategy:

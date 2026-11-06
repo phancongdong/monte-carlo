@@ -1,7 +1,7 @@
 """
 Real-process tests for the MCP worker's OS-assigned loopback port.
 
-Each worker here is a real `python -m jesse.mcp.server` subprocess started by the manager
+Each worker here is a real `python -m montecarlo.mcp.server` subprocess started by the manager
 with its listening socket handed over, in a throwaway working directory that is not a
 Jesse project, so no .env, key, or wallet file is ever read. The dashboard's /mcp route is
 the real Jesse FastAPI app on a background thread. Only initialize, tools/list,
@@ -23,12 +23,12 @@ import pytest
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 
-import jesse.mcp.manager as manager
-import jesse.mcp.mcp_config as mcp_config
-import jesse.mcp.server as mcp_server
-from jesse.mcp.auth import dashboard_token
-from jesse.services.env import ENV_VALUES
-from jesse.services.web import fastapi_app
+import montecarlo.mcp.manager as manager
+import montecarlo.mcp.mcp_config as mcp_config
+import montecarlo.mcp.server as mcp_server
+from montecarlo.mcp.auth import dashboard_token
+from montecarlo.services.env import ENV_VALUES
+from montecarlo.services.web import fastapi_app
 from tests.test_mcp_proxy import (
     MCP_ACCEPT,
     WAIT_SECONDS,
@@ -281,7 +281,7 @@ def test_transport_security_holds_on_the_os_assigned_port(shared_worker, http, h
 
 
 def test_run_mcp_server_serves_every_flow_through_the_dashboard_route(jesse_run, proxy, http, monkeypatch, capsys):
-    from jesse.services.general_info import _get_mcp_info
+    from montecarlo.services.general_info import _get_mcp_info
 
     # An old .env pointing MCP_PORT at a port that is already taken must not matter.
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as occupied:
@@ -322,7 +322,7 @@ def test_run_mcp_server_serves_every_flow_through_the_dashboard_route(jesse_run,
                      json={'jsonrpc': '2.0', 'id': 2, 'method': 'tools/list'}).status_code == 404
 
     # The route strips a browser Origin, so the worker's rebinding check never blocks it.
-    response = _initialize(http, url, {'Origin': 'https://jesse.example.com'})
+    response = _initialize(http, url, {'Origin': 'https://montecarlo.example.com'})
     assert response.status_code == 200
     session_id = response.headers['mcp-session-id']
     assert http.post(url, headers=_session_headers(session_id, AUTH['Authorization']),
@@ -349,7 +349,7 @@ def test_run_mcp_server_serves_every_flow_through_the_dashboard_route(jesse_run,
 
 
 def test_a_worker_that_exits_later_is_forgotten(jesse_run, proxy, http):
-    from jesse.services.general_info import _get_mcp_info
+    from montecarlo.services.general_info import _get_mcp_info
 
     manager.run_mcp_server('127.0.0.1', proxy.port, proxy.url)
     [worker] = jesse_run

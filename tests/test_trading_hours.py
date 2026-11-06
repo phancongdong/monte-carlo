@@ -4,8 +4,8 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pytest
 
-from jesse import utils
-from jesse.services import trading_hours as th
+from montecarlo import utils
+from montecarlo.services import trading_hours as th
 
 ET = ZoneInfo('America/New_York')
 UTC = ZoneInfo('UTC')
@@ -302,7 +302,7 @@ FIFTEEN_MIN = 15 * 60_000
 
 
 def _probe(candle_opens, now, hours=EXTENDED_HOURS):
-    from jesse.strategies import Strategy
+    from montecarlo.strategies import Strategy
 
     class Probe(Strategy):
         def trading_hours(self):

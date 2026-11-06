@@ -9,17 +9,17 @@ import requests
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-import jesse.mcp.tools.services.strategy_catalog as catalog_service
-from jesse.controllers import auth_controller, strategy_controller
-from jesse.mcp.agent_rules import _load_packaged_rules
-from jesse.mcp.resources import register_resources
-from jesse.mcp.tools import register_tools
-from jesse.services import auth
+import montecarlo.mcp.tools.services.strategy_catalog as catalog_service
+from montecarlo.controllers import auth_controller, strategy_controller
+from montecarlo.mcp.agent_rules import _load_packaged_rules
+from montecarlo.mcp.resources import register_resources
+from montecarlo.mcp.tools import register_tools
+from montecarlo.services import auth
 from tests.mcp_tool_adapters import callable_tool
 
 
 PASSWORD = 'strategy-catalog-password'
-JESSE_URL = 'http://jesse.test'
+JESSE_URL = 'http://montecarlo.test'
 API2_URL = 'http://api2.test'
 DASHBOARD = 'http://localhost:9000'
 FREE_LICENSE = 'license-free-account'
@@ -36,7 +36,7 @@ SORT_FIELDS = {
 
 
 def _code(class_name: str) -> str:
-    return f'from jesse.strategies import Strategy\n\n\nclass {class_name}(Strategy):\n    pass\n'
+    return f'from montecarlo.strategies import Strategy\n\n\nclass {class_name}(Strategy):\n    pass\n'
 
 
 def _metrics(sharpe, pnl, sortino, calmar, win_rate, status='completed', symbol='BTC-USDT', timeframe='4h'):

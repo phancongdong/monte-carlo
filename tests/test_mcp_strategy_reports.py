@@ -8,19 +8,19 @@ import requests
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-import jesse.mcp.tools.services.strategy as strategy_service
-from jesse.controllers import strategy_controller
-from jesse.mcp.agent_rules import _load_packaged_rules
-from jesse.mcp.resources import register_resources
-from jesse.mcp.tools import register_tools
-from jesse.services import auth
-from jesse.services.nofollow_fs import extended_path
+import montecarlo.mcp.tools.services.strategy as strategy_service
+from montecarlo.controllers import strategy_controller
+from montecarlo.mcp.agent_rules import _load_packaged_rules
+from montecarlo.mcp.resources import register_resources
+from montecarlo.mcp.tools import register_tools
+from montecarlo.services import auth
+from montecarlo.services.nofollow_fs import extended_path
 from tests.mcp_tool_adapters import callable_tool
 
 
 PASSWORD = 'strategy-reports-password'
 AUTHORIZATION = sha256(PASSWORD.encode('utf-8')).hexdigest()
-STRATEGY_CODE = 'from jesse.strategies import Strategy\n\n\nclass MyStrategy(Strategy):\n    pass\n'
+STRATEGY_CODE = 'from montecarlo.strategies import Strategy\n\n\nclass MyStrategy(Strategy):\n    pass\n'
 REPORT = '# MyStrategy report\n\nDashboard: http://localhost:9000/backtest/abc\r\nSharpe — 1.42 ✅\n'
 
 
@@ -72,10 +72,10 @@ def api_client(monkeypatch) -> TestClient:
 def report_tool(api_client, monkeypatch):
     """The registered MCP tool, with its HTTP calls served by the real router in-process."""
     def forward_post(url, json=None, headers=None, timeout=None):
-        assert url.startswith('http://jesse.test/')
-        return api_client.post(url.removeprefix('http://jesse.test'), json=json, headers=headers)
+        assert url.startswith('http://montecarlo.test/')
+        return api_client.post(url.removeprefix('http://montecarlo.test'), json=json, headers=headers)
 
-    monkeypatch.setattr(strategy_service.mcp_config, 'JESSE_API_URL', 'http://jesse.test')
+    monkeypatch.setattr(strategy_service.mcp_config, 'JESSE_API_URL', 'http://montecarlo.test')
     monkeypatch.setattr(strategy_service.mcp_config, 'JESSE_PASSWORD', PASSWORD)
     monkeypatch.setattr(strategy_service.requests, 'post', forward_post)
     mcp = FakeMCP()

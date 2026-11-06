@@ -36,10 +36,10 @@ import pytest
 import uvicorn
 from fastapi import FastAPI, Request
 
-import jesse.helpers as jh
-import jesse.mcp.mcp_config as mcp_config
-import jesse.mcp.tools.services.live as live_service
-from jesse.controllers import (
+import montecarlo.helpers as jh
+import montecarlo.mcp.mcp_config as mcp_config
+import montecarlo.mcp.tools.services.live as live_service
+from montecarlo.controllers import (
     config_controller,
     exchange_controller,
     live_controller,
@@ -48,17 +48,17 @@ from jesse.controllers import (
     system_controller,
     tabs_controller,
 )
-from jesse.info import exchange_info
-from jesse.mcp.server import create_mcp_server
-from jesse.mcp.tools.services.session_config import live_engine_config
-from jesse.models.ExchangeApiKeys import ExchangeApiKeys
-from jesse.models.LiveSession import LiveSession
-from jesse.models.NotificationApiKeys import NotificationApiKeys
-from jesse.models.OpenTab import OpenTab
-from jesse.models.Option import Option
-from jesse.repositories import live_session_repository, open_tab_repository
-from jesse.services import auth, general_info
-from jesse.services.multiprocessing import process_manager
+from montecarlo.info import exchange_info
+from montecarlo.mcp.server import create_mcp_server
+from montecarlo.mcp.tools.services.session_config import live_engine_config
+from montecarlo.models.ExchangeApiKeys import ExchangeApiKeys
+from montecarlo.models.LiveSession import LiveSession
+from montecarlo.models.NotificationApiKeys import NotificationApiKeys
+from montecarlo.models.OpenTab import OpenTab
+from montecarlo.models.Option import Option
+from montecarlo.repositories import live_session_repository, open_tab_repository
+from montecarlo.services import auth, general_info
+from montecarlo.services.multiprocessing import process_manager
 
 PASSWORD = 'live-sessions-test-password'
 AUTH = sha256(PASSWORD.encode('utf-8')).hexdigest()
@@ -211,7 +211,7 @@ class _Server:
 
 
 class _RepositoryHelpers(types.SimpleNamespace):
-    """jesse.helpers for the repositories, without their unit-test guard that skips the database."""
+    """montecarlo.helpers for the repositories, without their unit-test guard that skips the database."""
 
     def __getattr__(self, name):
         return getattr(jh, name)
@@ -356,7 +356,7 @@ def _no_secrets(*results) -> None:
 
 
 def _writes(jesse) -> list:
-    return [path for method, path in jesse.requests
+    return [path for method, path in montecarlo.requests
             if path in ('/live', '/live/cancel', '/live/update-state') or path.endswith(('/remove', '/notes'))]
 
 
@@ -420,7 +420,7 @@ def test_stop_semantics_match_the_live_plugin_termination_rule():
 # ---------------------------------------------------------------------------
 
 def test_every_live_tool_needs_the_live_plugin_and_writes_nothing_without_it(jesse):
-    jesse.plugin['installed'] = False
+    montecarlo.plugin['installed'] = False
     session_id = str(uuid.uuid4())
     results = [
         _paper(),
@@ -432,7 +432,7 @@ def test_every_live_tool_needs_the_live_plugin_and_writes_nothing_without_it(jes
         live_service.delete_live_session_service(session_id),
     ]
     assert [(r['status'], r['error_type']) for r in results] == [('error', 'live_plugin_unavailable')] * 7
-    assert _writes(jesse) == [] and LiveSession.select().count() == 0 and jesse.processes.started == []
+    assert _writes(jesse) == [] and LiveSession.select().count() == 0 and montecarlo.processes.started == []
 
 
 def test_dashboard_authentication_failures_are_typed_and_leak_nothing(jesse, monkeypatch):
@@ -476,7 +476,7 @@ def test_a_paper_draft_gets_the_dashboard_default_for_its_exchange_and_shared_se
         'debug_mode': True, 'paper_mode': True, 'exchange_api_key_id': '', 'notification_api_key_id': '',
         'exchange': 'Binance Perpetual Futures', 'routes': ROUTES, 'data_routes': [], 'config': expected,
     }
-    assert _settings_json() == before and jesse.processes.started == []
+    assert _settings_json() == before and montecarlo.processes.started == []
 
 
 def test_remembered_paper_and_credential_profiles_are_used_like_the_dashboard(jesse):
@@ -661,7 +661,7 @@ def test_starting_a_paper_draft_sends_the_dashboard_request_and_runs_nothing_its
 
     assert result['status'] == 'success' and result['mode'] == 'paper' and result['session_status'] == 'starting'
     assert 'plan_check' not in result
-    [(function, args)] = jesse.processes.started
+    [(function, args)] = montecarlo.processes.started
     assert function is sys.modules['jesse_live.live_mode'].run  # handed over, never called
     session_id, debug, exchange, key_id, notification_id, config, routes, data_routes, mode = args
     assert (session_id, debug, exchange, key_id, notification_id) == (
@@ -672,7 +672,7 @@ def test_starting_a_paper_draft_sends_the_dashboard_request_and_runs_nothing_its
     row = _row(draft['session_id'])
     assert (row.status, row.session_mode) == ('starting', 'papertrade')
     # Like dashboard Start, MCP leaves licensing to the session plugin, with no plan preflight.
-    assert jesse.jesse_trade.authorizations == []
+    assert montecarlo.jesse_trade.authorizations == []
     assert _settings_json() == before
     _no_secrets(draft, result)
 
@@ -690,7 +690,7 @@ def test_backup_check_intervals_are_set_per_draft_and_reach_the_engine(jesse):
     assert updated['config']['order_backup_check_seconds'] == 0
 
     live_service.start_live_session_service(draft['session_id'])
-    [(_function, args)] = jesse.processes.started
+    [(_function, args)] = montecarlo.processes.started
     assert args[5]['order_backup_check_seconds'] == 0
     assert args[5]['candle_backup_refresh_seconds'] is None
 
@@ -700,7 +700,7 @@ def test_starting_a_real_draft_sends_its_key_and_the_venue_config(jesse):
     result = live_service.start_live_session_service(draft['session_id'])
 
     assert result['mode'] == 'live' and 'REAL' in result['trading']
-    [(_function, args)] = jesse.processes.started
+    [(_function, args)] = montecarlo.processes.started
     assert args[2:4] == ('Binance Spot', SPOT_KEY) and args[-1] == 'livetrade'
     assert args[5]['exchanges']['Binance Spot']['simulation_model'] == 'spot'
     assert _row(draft['session_id']).session_mode == 'livetrade'
@@ -710,13 +710,13 @@ def test_starting_a_real_draft_sends_its_key_and_the_venue_config(jesse):
 def test_only_drafts_start_and_a_started_session_is_never_started_twice(jesse):
     draft = _paper()['session_id']
     assert live_service.start_live_session_service(draft)['status'] == 'success'
-    plan_requests = len(jesse.jesse_trade.authorizations)
+    plan_requests = len(montecarlo.jesse_trade.authorizations)
 
     again = live_service.start_live_session_service(draft)
-    assert again['error_type'] == 'not_draft' and len(jesse.processes.started) == 1
+    assert again['error_type'] == 'not_draft' and len(montecarlo.processes.started) == 1
     # Refused before asking local.framework or reaching /live (which would refuse it again with 409).
-    assert len(jesse.jesse_trade.authorizations) == plan_requests
-    assert [path for _method, path in jesse.requests].count('/live') == 1
+    assert len(montecarlo.jesse_trade.authorizations) == plan_requests
+    assert [path for _method, path in montecarlo.requests].count('/live') == 1
     assert live_service.start_live_session_service(str(uuid.uuid4()))['error_type'] == 'not_found'
 
 
@@ -728,7 +728,7 @@ def test_a_paper_draft_that_remembers_a_key_starts_without_it(jesse):
     result = live_service.start_live_session_service(draft['session_id'])
 
     assert result['mode'] == 'paper' and result['exchange_api_key'] is None
-    [(_function, args)] = jesse.processes.started
+    [(_function, args)] = montecarlo.processes.started
     assert args[3] == '' and args[-1] == 'papertrade'
 
 
@@ -764,7 +764,7 @@ def test_overlapping_start_requests_for_one_draft_start_one_process(jesse):
     body = {'id': draft, 'exchange': form['exchange'], 'exchange_api_key_id': '', 'notification_api_key_id': '',
             'routes': form['routes'], 'data_routes': [], 'config': live_engine_config(form['config']),
             'debug_mode': True, 'paper_mode': True}
-    jesse.processes.start_delay = 0.3
+    montecarlo.processes.start_delay = 0.3
     statuses = []
     threads = [threading.Thread(target=lambda: statuses.append(requests.post(
         f'{mcp_config.JESSE_API_URL}/live', json=body, headers={'Authorization': AUTH}, timeout=WAIT_SECONDS).status_code))
@@ -775,7 +775,7 @@ def test_overlapping_start_requests_for_one_draft_start_one_process(jesse):
         thread.join(WAIT_SECONDS)
 
     assert sorted(statuses) == [202, 409, 409, 409]
-    assert len(jesse.processes.started) == 1
+    assert len(montecarlo.processes.started) == 1
 
 
 def test_a_stop_never_waits_behind_another_mcp_call(jesse, monkeypatch):
@@ -805,8 +805,8 @@ def test_a_stop_never_waits_behind_another_mcp_call(jesse, monkeypatch):
         starter.join(WAIT_SECONDS)
 
     assert stopped['status'] == 'success' and elapsed < 2
-    assert jesse.processes.cancelled == [running]
-    assert results['start']['status'] == 'success' and waiting in jesse.processes.active
+    assert montecarlo.processes.cancelled == [running]
+    assert results['start']['status'] == 'success' and waiting in montecarlo.processes.active
 
 
 def _start_body(session_id: str, form: dict) -> dict:
@@ -821,16 +821,16 @@ def test_a_failed_process_launch_leaves_the_draft_as_it_was(jesse):
     session_id = _paper(title='keep me')['session_id']
     columns = ('status', 'session_mode', 'exchange', 'state', 'title', 'finished_at', 'exception', 'updated_at')
     before = [getattr(_row(session_id), column) for column in columns]
-    jesse.processes.fail_launch = 'before'
+    montecarlo.processes.fail_launch = 'before'
 
     failed = live_service.start_live_session_service(session_id)
 
     assert (failed['status'], failed['error_type'], failed['http_status']) == ('error', 'jesse_error', 500)
     assert [getattr(_row(session_id), column) for column in columns] == before
-    assert jesse.processes.started == [] and not jesse.processes.active
+    assert montecarlo.processes.started == [] and not montecarlo.processes.active
     # The draft starts normally afterwards.
     assert live_service.start_live_session_service(session_id)['status'] == 'success'
-    assert len(jesse.processes.started) == 1
+    assert len(montecarlo.processes.started) == 1
 
 
 def test_a_failed_launch_of_a_session_without_a_draft_leaves_no_row(jesse):
@@ -838,7 +838,7 @@ def test_a_failed_launch_of_a_session_without_a_draft_leaves_no_row(jesse):
 
     form = _form(_paper()['session_id'])
     session_id = str(uuid.uuid4())
-    jesse.processes.fail_launch = 'before'
+    montecarlo.processes.fail_launch = 'before'
     response = requests.post(f'{mcp_config.JESSE_API_URL}/live', json=_start_body(session_id, form),
                              headers={'Authorization': AUTH}, timeout=WAIT_SECONDS)
     assert response.status_code == 500
@@ -848,25 +848,25 @@ def test_a_failed_launch_of_a_session_without_a_draft_leaves_no_row(jesse):
 def test_a_launch_error_after_the_process_started_never_frees_the_draft_for_a_second_start(jesse):
     """The process may be running, so the row stays "starting" and a second start is refused."""
     session_id = _paper()['session_id']
-    jesse.processes.fail_launch = 'after'
+    montecarlo.processes.fail_launch = 'after'
 
     failed = live_service.start_live_session_service(session_id)
 
     assert failed['http_status'] == 500
-    assert _row(session_id).status == 'starting' and session_id in jesse.processes.active
+    assert _row(session_id).status == 'starting' and session_id in montecarlo.processes.active
     assert live_service.start_live_session_service(session_id)['error_type'] == 'not_draft'
-    assert len(jesse.processes.started) == 1
+    assert len(montecarlo.processes.started) == 1
 
 
 def test_starts_match_dashboard_without_a_tab_cap_or_plan_preflight(jesse):
     """Tab allowances control dashboard tabs, not authorization for the Start operation."""
-    jesse.jesse_trade.status = 503
-    jesse.jesse_trade.limits['live_trading_tabs'] = 1
+    montecarlo.jesse_trade.status = 503
+    montecarlo.jesse_trade.limits['live_trading_tabs'] = 1
     for _ in range(3):
         draft = _paper()['session_id']
         assert live_service.start_live_session_service(draft)['status'] == 'success'
-    assert len(jesse.processes.started) == 3
-    assert jesse.jesse_trade.authorizations == []
+    assert len(montecarlo.processes.started) == 3
+    assert montecarlo.jesse_trade.authorizations == []
 
 
 @pytest.mark.parametrize('operation', ['remove', 'update-state', 'cancel'])
@@ -876,14 +876,14 @@ def test_dashboard_mutations_wait_for_start_to_publish_its_worker(jesse, operati
 
     draft = _paper()['session_id']
     form = _form(draft)
-    jesse.processes.start_delay = 0.5  # Hold the launch window until the competing HTTP request arrives.
+    montecarlo.processes.start_delay = 0.5  # Hold the launch window until the competing HTTP request arrives.
     results = {}
     starter = threading.Thread(target=lambda: results.update(start=requests.post(
         f'{mcp_config.JESSE_API_URL}/live', json=_start_body(draft, form),
         headers={'Authorization': AUTH}, timeout=WAIT_SECONDS)))
     starter.start()
     try:
-        assert jesse.processes.entered.wait(WAIT_SECONDS)
+        assert montecarlo.processes.entered.wait(WAIT_SECONDS)
         if operation == 'remove':
             path, body = f'/live/sessions/{draft}/remove', {}
         elif operation == 'update-state':
@@ -898,7 +898,7 @@ def test_dashboard_mutations_wait_for_start_to_publish_its_worker(jesse, operati
     assert response.status_code == (200 if operation == 'cancel' else 409)
     assert _row(draft).status == 'starting'
     assert 'changed' not in _form(draft)
-    assert (draft in jesse.processes.active) == (operation != 'cancel')
+    assert (draft in montecarlo.processes.active) == (operation != 'cancel')
 
 
 def test_draft_only_save_cannot_overwrite_an_ended_session_but_dashboard_can(jesse):
@@ -923,7 +923,7 @@ def test_stop_asks_the_session_to_end_and_describes_what_the_plugin_does(jesse):
     draft = _paper()['session_id']
     not_running = live_service.stop_live_session_service(draft)
     assert (not_running['error_type'], not_running['session_status']) == ('not_running', 'draft')
-    assert jesse.processes.cancelled == []
+    assert montecarlo.processes.cancelled == []
 
     live_service.start_live_session_service(draft)
     result = live_service.stop_live_session_service(draft)
@@ -931,8 +931,8 @@ def test_stop_asks_the_session_to_end_and_describes_what_the_plugin_does(jesse):
     assert result['status'] == 'success' and result['action'] == 'live_session_stop_requested'
     assert result['mode'] == 'paper' and result['on_stop'] == live_service.STOP_SEMANTICS
     assert 'closes their open positions' in result['on_stop'] and 'persistency on leaves' in result['on_stop']
-    assert jesse.processes.cancelled == [draft] and draft not in jesse.processes.active
-    assert ('POST', '/live/cancel') in jesse.requests
+    assert montecarlo.processes.cancelled == [draft] and draft not in montecarlo.processes.active
+    assert ('POST', '/live/cancel') in montecarlo.requests
     # The session record now reconciles to stopped exactly like the dashboard's view.
     assert live_service.stop_live_session_service(draft)['error_type'] == 'not_running'
     assert _row(draft).status == 'stopped'
@@ -957,7 +957,7 @@ def test_restart_is_copy_then_start_and_leaves_the_old_session_alone(jesse):
     assert _row(copy['session_id']).title == 'rerun' and _row(copy['session_id']).status == 'draft'
     assert _row(session_id).status == 'stopped'
     assert live_service.start_live_session_service(copy['session_id'])['status'] == 'success'
-    assert [args[0] for _function, args in jesse.processes.started] == [session_id, copy['session_id']]
+    assert [args[0] for _function, args in montecarlo.processes.started] == [session_id, copy['session_id']]
 
 
 def test_copying_a_starting_session_keeps_its_engine_config(jesse):
@@ -976,7 +976,7 @@ def test_a_copy_is_refused_when_its_saved_key_is_gone(jesse):
     result = live_service.copy_live_session_service(live['session_id'])
     assert result['error_type'] == 'key_not_found' and LiveSession.select().count() == 1
     assert live_service.start_live_session_service(live['session_id'])['error_type'] == 'key_not_found'
-    assert jesse.processes.started == []
+    assert montecarlo.processes.started == []
 
 
 # ---------------------------------------------------------------------------
@@ -1075,7 +1075,7 @@ def test_concurrent_drafts_keep_their_own_configs_and_never_touch_shared_setting
     ]
 
     async def create_all():
-        from jesse.mcp.tools.offload import run_blocking
+        from montecarlo.mcp.tools.offload import run_blocking
         results = [None] * len(requests_made)
 
         async def one(index, arguments):
@@ -1120,7 +1120,7 @@ def test_live_tools_run_through_fastmcp_and_validate_arguments_first(jesse, capl
     assert (draft['mode'], started['mode'], stopped['mode']) == ('live', 'live', 'live')
     assert (missing_mode['status'], missing_mode['error_type']) == ('error', 'invalid_request')
     assert 'paper_mode is required' in missing_mode['message']
-    assert jesse.processes.cancelled == [draft['session_id']]
+    assert montecarlo.processes.cancelled == [draft['session_id']]
     _no_secrets(draft, started, stopped, [record.getMessage() for record in caplog.records])
 
 
@@ -1164,14 +1164,14 @@ def test_fastmcp_argument_errors_never_quote_a_misplaced_secret(jesse, caplog, t
     _no_secrets(result, logged)
     assert str(NUMERIC_SENTINEL) not in json.dumps([result, logged])
     # Refused before any request reached Jesse.
-    assert jesse.requests == [] and LiveSession.select().count() == 0
+    assert montecarlo.requests == [] and LiveSession.select().count() == 0
 
 
 def test_agent_guidance_describes_live_management_and_never_promises_closed_positions():
     """Agent guidance must expose the supported live-session lifecycle."""
-    from jesse.mcp import server as mcp_server
-    from jesse.mcp.agent_rules import _load_packaged_rules
-    from jesse.mcp.resources import register_resources
+    from montecarlo.mcp import server as mcp_server
+    from montecarlo.mcp.agent_rules import _load_packaged_rules
+    from montecarlo.mcp.resources import register_resources
 
     class _Resources:
         def __init__(self):
@@ -1275,7 +1275,7 @@ def test_restart_runs_an_ended_session_again_with_its_exact_settings(jesse):
     assert result['config']['exchange']['futures_leverage'] == 12
     assert result['config_source'] == {'exchange.futures_leverage': 'copied', 'exchange.futures_leverage_mode': 'copied'}
     assert 'config_warnings' not in result
-    assert [args[0] for _function, args in jesse.processes.started] == [session_id, new_id]
+    assert [args[0] for _function, args in montecarlo.processes.started] == [session_id, new_id]
     assert _row(new_id).title == 'BTC trend' and _row(session_id).status == 'stopped'
     _no_secrets(result)
 
@@ -1288,7 +1288,7 @@ def test_restart_refuses_a_running_session_and_a_draft(jesse):
     live_service.start_live_session_service(draft)
     running = live_service.restart_live_session_service(draft)
     assert running['error_type'] == 'session_active' and 'never stops one' in running['message']
-    assert jesse.processes.cancelled == [] and len(jesse.processes.started) == 1
+    assert montecarlo.processes.cancelled == [] and len(montecarlo.processes.started) == 1
 
 
 def test_restart_refuses_when_these_routes_already_run_on_the_key(jesse):
@@ -1299,7 +1299,7 @@ def test_restart_refuses_when_these_routes_already_run_on_the_key(jesse):
     again = live_service.restart_live_session_service(ended)
 
     assert again['error_type'] == 'routes_already_running' and again['running_session_id'] == already
-    assert len(jesse.processes.started) == 2
+    assert len(montecarlo.processes.started) == 2
 
 
 def test_restart_does_not_start_a_copy_whose_money_settings_were_lost(jesse):
@@ -1316,7 +1316,7 @@ def test_restart_does_not_start_a_copy_whose_money_settings_were_lost(jesse):
     assert result['config_source']['exchange.futures_leverage'] == 'saved_default'
     assert 'NOT started' in result['message'] and 'futures_leverage 7' in result['message']
     assert _row(result['draft_session_id']).status == 'draft'
-    assert len(jesse.processes.started) == 1
+    assert len(montecarlo.processes.started) == 1
 
 
 def test_a_new_draft_for_routes_that_already_ran_points_to_restart(jesse):

@@ -1,11 +1,11 @@
 import numpy as np
 import pytest
 
-import jesse.helpers as jh
-from jesse import research
-from jesse.enums import order_types
-from jesse.store import store
-from jesse.strategies import Strategy
+import montecarlo.helpers as jh
+from montecarlo import research
+from montecarlo.enums import order_types
+from montecarlo.store import store
+from montecarlo.strategies import Strategy
 
 
 START_TIMESTAMP = 1_609_459_200_000

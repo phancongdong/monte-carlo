@@ -60,8 +60,8 @@ REGISTERED_TOOL_COUNT = 101
 # `jesse run` with the MCP worker started by the real manager (see the module docstring).
 RUN_WITH_MCP = r'''
 import uvicorn
-from jesse import cli
-from jesse.mcp.manager import run_mcp_server
+from montecarlo import cli
+from montecarlo.mcp.manager import run_mcp_server
 
 serve_dashboard = uvicorn.run
 
@@ -81,20 +81,20 @@ WORKER_PORT_LOG = re.compile(r'MCP worker listening on internal loopback port (\
 # model and repository functions and prints the created IDs.
 SEED_SCRIPT = r'''
 import json, os, uuid
-import jesse.helpers as jh
-from jesse.models.BacktestSession import BacktestSession
-from jesse.models.OptimizationSession import store_optimization_session, update_optimization_session_trials, update_optimization_session_status, OptimizationSession
-from jesse.models.MonteCarloSession import (store_monte_carlo_session, store_candles_session, update_candles_session_progress,
+import montecarlo.helpers as jh
+from montecarlo.models.BacktestSession import BacktestSession
+from montecarlo.models.OptimizationSession import store_optimization_session, update_optimization_session_trials, update_optimization_session_status, OptimizationSession
+from montecarlo.models.MonteCarloSession import (store_monte_carlo_session, store_candles_session, update_candles_session_progress,
     update_candles_session_status, update_monte_carlo_session_status)
-from jesse.models.SignificanceTestSession import (store_significance_test_session, update_significance_test_session_results,
+from montecarlo.models.SignificanceTestSession import (store_significance_test_session, update_significance_test_session_results,
     update_significance_test_session_status)
-from jesse.models.ExchangeApiKeys import ExchangeApiKeys
-from jesse.models.ClosedTrade import ClosedTrade
-from jesse.models.Order import Order
-from jesse.models.LiveEquitySnapshot import LiveEquitySnapshot
-from jesse.models.Log import store_log_into_db
-from jesse.repositories import live_session_repository
-from jesse.services.db import database
+from montecarlo.models.ExchangeApiKeys import ExchangeApiKeys
+from montecarlo.models.ClosedTrade import ClosedTrade
+from montecarlo.models.Order import Order
+from montecarlo.models.LiveEquitySnapshot import LiveEquitySnapshot
+from montecarlo.models.Log import store_log_into_db
+from montecarlo.repositories import live_session_repository
+from montecarlo.services.db import database
 import datetime
 
 ids = {k: str(uuid.uuid4()) for k in ('backtest_a', 'backtest_b', 'backtest_running', 'optimization', 'monte_carlo',
@@ -235,7 +235,7 @@ def _child_env(env_file: Path, **extra) -> dict:
 def _start(project: Path, env: dict, with_mcp: bool = False):
     """Start `jesse run` in its own process group; the MCP worker, if any, joins that group."""
     log = open(project / 'server.log', 'wb')
-    entry = RUN_WITH_MCP if with_mcp else 'from jesse import cli; cli()'
+    entry = RUN_WITH_MCP if with_mcp else 'from montecarlo import cli; cli()'
     process = subprocess.Popen(
         [sys.executable, '-c', entry, 'run', '--skip-agent-rules'],
         cwd=project, env=env, stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
@@ -307,7 +307,7 @@ def _occupied_port() -> socket.socket:
 @pytest.fixture(scope='module')
 def coordinator(tmp_path_factory):
     """Build offline and own a native service without touching developer processes."""
-    from jesse.services.coordination_client import Client, CoordinationConnectionError
+    from montecarlo.services.coordination_client import Client, CoordinationConnectionError
 
     native = Path(os.environ.get('JESSE_COORDINATOR_SOURCE', str(JESSE_ROOT.parent / 'jesse-rust' / 'coordination')))
     # Bound a stalled offline build; there is no package download during this fixture.
@@ -352,7 +352,7 @@ def coordinator(tmp_path_factory):
 
 @pytest.fixture(scope='module')
 def instance(coordinator):
-    from jesse.mcp.auth import dashboard_token
+    from montecarlo.mcp.auth import dashboard_token
     project = Path(tempfile.mkdtemp(prefix='jesse-mcp-analysis-e2e-'))
     (project / 'strategies').mkdir()
     (project / 'storage').mkdir()
@@ -642,7 +642,7 @@ signal.signal(signal.SIGTERM, signal.SIG_IGN)
 print("ready", flush=True)
 time.sleep(120)
 '''
-STRATEGY_SOURCE = '''from jesse.strategies import Strategy
+STRATEGY_SOURCE = '''from montecarlo.strategies import Strategy
 
 
 class E2EStrategy(Strategy):
@@ -922,7 +922,7 @@ async def _tools_and_indicators(url: str, token: str):
 def test_two_instances_run_their_own_workers_side_by_side(instance):
     """A second instance on the same machine and schema, with its own password and worker."""
     import requests
-    from jesse.mcp.auth import dashboard_token
+    from montecarlo.mcp.auth import dashboard_token
     project = Path(tempfile.mkdtemp(prefix='jesse-mcp-analysis-e2e-second-'))
     (project / 'strategies').mkdir()
     (project / 'storage').mkdir()
@@ -1064,7 +1064,7 @@ def test_catalog_and_license_routes_keep_their_checks_and_do_not_stall_the_api_o
     import anyio
     import requests
     import threading
-    from jesse.mcp.auth import dashboard_token
+    from montecarlo.mcp.auth import dashboard_token
 
     project = Path(tempfile.mkdtemp(prefix='jesse-mcp-analysis-e2e-catalog-'))
     (project / 'strategies').mkdir()
@@ -1191,9 +1191,9 @@ def test_catalog_and_license_routes_keep_their_checks_and_do_not_stall_the_api_o
 # Seeds candle rows through Jesse's Candle model in the instance's guarded schema. Every symbol
 # carries an E2E prefix; the 1m series spans three of the export's 5,000-row cursor batches.
 CANDLE_SEED_SCRIPT = r'''
-import jesse.helpers as jh
-from jesse.models.Candle import Candle
-from jesse.services.db import database
+import montecarlo.helpers as jh
+from montecarlo.models.Candle import Candle
+from montecarlo.services.db import database
 database.open_connection()
 T0 = 1704067200000
 
@@ -1212,7 +1212,7 @@ for batch in (rows('Binance Perpetual Futures', 'E2EBTC-USDT', 12345),
 
 # /candles/get reads the live settings the dashboard saves on first load; store them the same way.
 import json
-from jesse.models.Option import Option
+from montecarlo.models.Option import Option
 option = Option.get_or_none(Option.type == 'config')
 settings = json.loads(option.json) if option else {}
 settings['live'] = {**settings.get('live', {}), 'warm_up_candles': 20, 'generate_candles_from_1m': True}
@@ -1227,8 +1227,8 @@ print('seeded')
 # active in the instance's coordinator worker set instead of starting any process.
 RUNNING_SESSION_SCRIPT = r'''
 import json, sys
-from jesse.repositories import live_session_repository
-from jesse.services.db import database
+from montecarlo.repositories import live_session_repository
+from montecarlo.services.db import database
 database.open_connection()
 live_session_repository.store_live_session(sys.argv[1], 'running', 'papertrade', 'Bybit USDT Perpetual', {'form': {
     'debug_mode': True, 'paper_mode': True, 'exchange': 'Bybit USDT Perpetual', 'exchange_api_key_id': '',
@@ -1237,7 +1237,7 @@ live_session_repository.store_live_session(sys.argv[1], 'running', 'papertrade',
 print('stored')
 '''
 
-E2E_LIVE_STRATEGY = 'from jesse.strategies import Strategy\n\n\nclass E2ELive(Strategy):\n    def should_long(self):\n        return False\n\n    def go_long(self):\n        pass\n'
+E2E_LIVE_STRATEGY = 'from montecarlo.strategies import Strategy\n\n\nclass E2ELive(Strategy):\n    def should_long(self):\n        return False\n\n    def go_long(self):\n        pass\n'
 LIVE_ROUTES = json.dumps([{'strategy': 'E2ELive', 'symbol': 'BTC-USDT', 'timeframe': '1h'}])
 
 
@@ -1253,7 +1253,7 @@ def _run_in_instance(instance, script: str, *args: str) -> str:
 def _coordination(env_file: Path):
     """Inspect worker markers through the same namespace as the target instance."""
     from dotenv import dotenv_values
-    from jesse.services.coordination_client import Client
+    from montecarlo.services.coordination_client import Client
 
     values = dotenv_values(env_file)
     client = Client(values['COORDINATION_HOST'], int(values['COORDINATION_PORT']),
@@ -1494,7 +1494,7 @@ def test_invalid_live_starts_are_refused_without_a_plan_preflight(instance):
     this real-process integration never starts a trading engine.
     """
     import uuid as uuid_module
-    from jesse.mcp.auth import dashboard_token
+    from montecarlo.mcp.auth import dashboard_token
 
     project = Path(tempfile.mkdtemp(prefix='jesse-mcp-live-plan-e2e-'))
     (project / 'strategies' / 'E2ELive').mkdir(parents=True)
@@ -1560,9 +1560,9 @@ def test_invalid_live_starts_are_refused_without_a_plan_preflight(instance):
 # the same millisecond (one group straddles the snapshot's 1,000-row batch boundary).
 HISTORY_SEED = r"""
 import json, sys, uuid
-from jesse.models.ClosedTrade import ClosedTrade
-from jesse.models.Order import Order
-from jesse.repositories import live_session_repository
+from montecarlo.models.ClosedTrade import ClosedTrade
+from montecarlo.models.Order import Order
+from montecarlo.repositories import live_session_repository
 
 key_id, start, end, fake_key, fake_secret = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), sys.argv[4], sys.argv[5]
 ids = {name: str(uuid.uuid4()) for name in ('a', 'b', 'deleted', 'paper')}
@@ -1725,7 +1725,7 @@ def test_live_history_by_date_window_through_the_mcp_client(instance):
     assert (empty['total'], empty['items'], empty['all_records_returned']) == (0, [], True)
     assert eth['total'] == 240
     # Reading never rewrote the stale "running" record.
-    assert 'running' in _run_in_instance(instance, 'import sys\nfrom jesse.models.LiveSession import LiveSession\n'
+    assert 'running' in _run_in_instance(instance, 'import sys\nfrom montecarlo.models.LiveSession import LiveSession\n'
                                          'print(LiveSession.get(LiveSession.id == sys.argv[1]).status)', seeded['b'])
 
     # The analysis snapshot is the complete selection (two 1,000-row batches), charted and returned as an image.
@@ -1752,9 +1752,9 @@ def test_live_history_by_date_window_through_the_mcp_client(instance):
 # second exchange one closed trade with 10,001 executed orders (over the per-trade limit).
 CONSISTENCY_SEED = r"""
 import json, sys, uuid
-from jesse.models.ClosedTrade import ClosedTrade
-from jesse.models.Order import Order
-from jesse.repositories import live_session_repository
+from montecarlo.models.ClosedTrade import ClosedTrade
+from montecarlo.models.Order import Order
+from montecarlo.repositories import live_session_repository
 
 start, flip_exchange, heavy_exchange = int(sys.argv[1]), sys.argv[2], sys.argv[3]
 session = str(uuid.uuid4())
@@ -1889,10 +1889,10 @@ def test_history_reads_one_postgres_snapshot_while_an_independent_writer_commits
 # fee, and paper trades.
 WORKFLOW_SEED = r"""
 import json, sys, uuid
-import jesse.helpers as jh
-from jesse.models.ClosedTrade import ClosedTrade
-from jesse.models.Order import Order
-from jesse.repositories import live_session_repository
+import montecarlo.helpers as jh
+from montecarlo.models.ClosedTrade import ClosedTrade
+from montecarlo.models.Order import Order
+from montecarlo.repositories import live_session_repository
 
 exchange = sys.argv[1]
 now = jh.now_to_timestamp(True)

@@ -4,13 +4,13 @@ import importlib
 import pytest
 import ray
 
-from jesse import research
-from jesse.config import config
-from jesse.factories import candles_from_close_prices
-import jesse.helpers as jh
-from jesse.modes.optimize_mode import fitness
-from jesse.routes import router
-from jesse.store import store
+from montecarlo import research
+from montecarlo.config import config
+from montecarlo.factories import candles_from_close_prices
+import montecarlo.helpers as jh
+from montecarlo.modes.optimize_mode import fitness
+from montecarlo.routes import router
+from montecarlo.store import store
 
 
 def _optimization_inputs() -> tuple[dict, list, list, dict, dict]:
@@ -164,7 +164,7 @@ def test_ray_fitness_uses_explicit_worker_configuration(monkeypatch: pytest.Monk
 
 def _optimize_until_ray(monkeypatch: pytest.MonkeyPatch, *, initialized: bool) -> list:
     """Run research.optimize with Ray's lifecycle recorded; it stops at its first Ray use."""
-    optimize_module = importlib.import_module('jesse.research.optimize')
+    optimize_module = importlib.import_module('montecarlo.research.optimize')
     events = []
 
     class StoppedAtRay(Exception):
@@ -179,7 +179,7 @@ def _optimize_until_ray(monkeypatch: pytest.MonkeyPatch, *, initialized: bool) -
         raise StoppedAtRay
 
     def unexpected_raw_init(**kwargs):
-        raise AssertionError('Ray must be started through jesse.services.ray_runtime')
+        raise AssertionError('Ray must be started through montecarlo.services.ray_runtime')
 
     monkeypatch.setattr(optimize_module, 'cpu_count', lambda: 8)
     monkeypatch.setattr(optimize_module, 'initialize_ray', start)
@@ -217,7 +217,7 @@ def test_optimization_reuses_a_caller_owned_ray_runtime(monkeypatch: pytest.Monk
 
 
 def test_optimization_cleans_parent_state_after_failure(monkeypatch: pytest.MonkeyPatch) -> None:
-    optimize_module = importlib.import_module('jesse.research.optimize')
+    optimize_module = importlib.import_module('montecarlo.research.optimize')
 
     def fail_after_bootstrap(**_kwargs) -> None:
         config['app']['trading_mode'] = 'optimize'

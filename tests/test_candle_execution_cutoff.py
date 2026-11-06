@@ -3,13 +3,13 @@ from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 import pytest
 
-import jesse.helpers as jh
-from jesse.enums import exchanges
-from jesse.libs import DynamicNumpyArray
-from jesse.routes import router
-from jesse.services import candle_service
-from jesse.store import store
-from jesse.testing_utils import set_up
+import montecarlo.helpers as jh
+from montecarlo.enums import exchanges
+from montecarlo.libs import DynamicNumpyArray
+from montecarlo.routes import router
+from montecarlo.services import candle_service
+from montecarlo.store import store
+from montecarlo.testing_utils import set_up
 
 
 MINUTE = 60_000

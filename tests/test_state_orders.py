@@ -1,10 +1,10 @@
-from jesse.config import config, reset_config
-from jesse.enums import exchanges
-from jesse.factories import fake_order
-from jesse.store import store
-from jesse.routes import router
-from jesse.services import exchange_service, order_service, position_service
-import jesse.helpers as jh
+from montecarlo.config import config, reset_config
+from montecarlo.enums import exchanges
+from montecarlo.factories import fake_order
+from montecarlo.store import store
+from montecarlo.routes import router
+from montecarlo.services import exchange_service, order_service, position_service
+import montecarlo.helpers as jh
 
 
 def set_up():

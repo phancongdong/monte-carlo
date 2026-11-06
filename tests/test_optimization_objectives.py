@@ -3,9 +3,9 @@ import math
 import numpy as np
 import pytest
 
-import jesse.helpers as jh
-from jesse.factories import candles_from_close_prices
-from jesse.modes.optimize_mode import fitness
+import montecarlo.helpers as jh
+from montecarlo.factories import candles_from_close_prices
+from montecarlo.modes.optimize_mode import fitness
 
 EXCHANGE = 'Optimization Objectives Exchange'
 SYMBOL = 'TEST-USDT'

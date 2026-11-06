@@ -5,11 +5,11 @@ from types import SimpleNamespace
 import pytest
 from pydantic import ValidationError
 
-from jesse.controllers import backtest_controller, live_controller, monte_carlo_controller
-from jesse.enums import live_session_statuses
-from jesse.info import exchange_info
-from jesse.mcp.tools.services import backtest as mcp_backtest_service
-from jesse.services.web import (
+from montecarlo.controllers import backtest_controller, live_controller, monte_carlo_controller
+from montecarlo.enums import live_session_statuses
+from montecarlo.info import exchange_info
+from montecarlo.mcp.tools.services import backtest as mcp_backtest_service
+from montecarlo.services.web import (
     BacktestRequestJson,
     LiveRequestJson,
     MonteCarloRequestJson,

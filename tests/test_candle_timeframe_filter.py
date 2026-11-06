@@ -1,9 +1,9 @@
 import peewee
 import pytest
 
-import jesse.helpers as jh
-from jesse.models.Candle import Candle
-from jesse.services import candle_service
+import montecarlo.helpers as jh
+from montecarlo.models.Candle import Candle
+from montecarlo.services import candle_service
 
 # The candle queries must match 1m candles *and* legacy rows whose timeframe was never
 # set (NULL). That condition has to be built with peewee's `|` operator: Python's own

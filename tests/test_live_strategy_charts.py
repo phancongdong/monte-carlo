@@ -3,11 +3,11 @@ from types import SimpleNamespace
 
 import numpy as np
 
-import jesse.helpers as jh
-from jesse.controllers import live_controller
-from jesse.services import redis as redis_service
-from jesse.services import report
-from jesse.services.web import GetStrategyChartsRequestJson
+import montecarlo.helpers as jh
+from montecarlo.controllers import live_controller
+from montecarlo.services import redis as redis_service
+from montecarlo.services import report
+from montecarlo.services.web import GetStrategyChartsRequestJson
 
 
 class FakeRedis:

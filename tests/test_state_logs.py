@@ -1,6 +1,6 @@
-import jesse.helpers as jh
-import jesse.services.logger as logger
-from jesse.store import store
+import montecarlo.helpers as jh
+import montecarlo.services.logger as logger
+from montecarlo.store import store
 
 
 def set_up():

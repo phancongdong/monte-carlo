@@ -56,7 +56,7 @@ pip install -e .
 
 ### Run Monte Carlo Simulation
 ```python
-from jesse.research.monte_carlo import monte_carlo_trades, monte_carlo_candles
+from montecarlo.research.monte_carlo import monte_carlo_trades, monte_carlo_candles
 
 # 1. Run trade-order permutation simulation
 results = monte_carlo_trades(trades=trade_history, num_scenarios=1000)

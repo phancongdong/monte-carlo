@@ -16,7 +16,7 @@ optimization run, all of which go through set_config().
 """
 import copy
 
-from jesse.modes.data_provider import normalize_settings_sections
+from montecarlo.modes.data_provider import normalize_settings_sections
 
 
 def _full_config():

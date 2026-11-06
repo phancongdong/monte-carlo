@@ -24,14 +24,14 @@ import requests
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-import jesse.helpers as jh
-import jesse.mcp.mcp_config as mcp_config
-import jesse.mcp.tools.services.candles as candles_service
-from jesse.controllers import candles_controller
-from jesse.mcp.server import create_mcp_server
-from jesse.models.Candle import Candle
-from jesse.repositories import candle_repository
-from jesse.services import auth
+import montecarlo.helpers as jh
+import montecarlo.mcp.mcp_config as mcp_config
+import montecarlo.mcp.tools.services.candles as candles_service
+from montecarlo.controllers import candles_controller
+from montecarlo.mcp.server import create_mcp_server
+from montecarlo.models.Candle import Candle
+from montecarlo.repositories import candle_repository
+from montecarlo.services import auth
 
 PASSWORD = 'candle-management-password'
 AUTH = sha256(PASSWORD.encode('utf-8')).hexdigest()
@@ -66,7 +66,7 @@ class _Forwarder:
         self.calls: list = []
 
     def post(self, url, json=None, data=None, files=None, headers=None, timeout=None):
-        route = url.removeprefix('http://jesse.test')
+        route = url.removeprefix('http://montecarlo.test')
         self.calls.append(route)
         if files is not None:
             # CSV routes must retain server tracebacks; export tests separately exercise HTTP 500 responses.
@@ -154,7 +154,7 @@ def api(tmp_path, project, monkeypatch):
 def forwarder(api, monkeypatch) -> _Forwarder:
     fake = _Forwarder(api)
     monkeypatch.setattr(candles_service, 'requests', fake)
-    monkeypatch.setattr(mcp_config, 'JESSE_API_URL', 'http://jesse.test')
+    monkeypatch.setattr(mcp_config, 'JESSE_API_URL', 'http://montecarlo.test')
     monkeypatch.setattr(mcp_config, 'JESSE_PASSWORD', PASSWORD)
     monkeypatch.setattr(mcp_config, 'DASHBOARD_URL', None)
     return fake
@@ -207,7 +207,7 @@ def test_candle_tools_are_registered_with_bounded_schemas_and_honest_description
     # The resource agrees with the implementation: chunks commit separately and the source is
     # deleted afterwards, so copy and deletion are not one transaction.
     from importlib.resources import files
-    guide = (files('jesse.mcp.resources') / 'candle.md').read_text(encoding='utf-8')
+    guide = (files('montecarlo.mcp.resources') / 'candle.md').read_text(encoding='utf-8')
     assert 'in the same transaction' not in guide and 'not one transaction' in guide
 
 
@@ -607,7 +607,7 @@ def test_custom_csv_network_errors_are_not_reported_as_validation_errors(project
         raise requests.ConnectionError('refused')
 
     monkeypatch.setattr(candles_service, 'requests', SimpleNamespace(post=refuse, RequestException=requests.RequestException))
-    monkeypatch.setattr(mcp_config, 'JESSE_API_URL', 'http://jesse.test')
+    monkeypatch.setattr(mcp_config, 'JESSE_API_URL', 'http://montecarlo.test')
     monkeypatch.setattr(mcp_config, 'JESSE_PASSWORD', PASSWORD)
     for service in (candles_service.preview_custom_candle_csv_service, candles_service.clean_and_import_custom_candle_csv_service):
         # Absolute host paths work on Windows too; this test isolates HTTP failure handling.
@@ -659,8 +659,8 @@ def test_copy_through_mcp_matches_the_dashboard_rules(forwarder):
 # ---------------------------------------------------------------------------
 
 def test_import_uses_jesse_validation_and_the_background_process(forwarder, monkeypatch):
-    from jesse.modes import import_candles_mode
-    from jesse.services.multiprocessing import process_manager
+    from montecarlo.modes import import_candles_mode
+    from montecarlo.services.multiprocessing import process_manager
 
     outcomes, tasks = [], []
     monkeypatch.setattr(import_candles_mode, 'store_import_outcome', lambda *args: outcomes.append(args))
@@ -691,7 +691,7 @@ def test_get_candles_returns_a_bounded_newest_window(monkeypatch):
         return SimpleNamespace(status_code=200, json=lambda: payload, text='')
 
     monkeypatch.setattr(candles_service, 'requests', SimpleNamespace(post=fake_post, RequestException=requests.RequestException))
-    monkeypatch.setattr(mcp_config, 'JESSE_API_URL', 'http://jesse.test')
+    monkeypatch.setattr(mcp_config, 'JESSE_API_URL', 'http://montecarlo.test')
     monkeypatch.setattr(mcp_config, 'JESSE_PASSWORD', PASSWORD)
 
     default = candles_service.get_candles_service('Binance Spot', 'BTC-USDT', '1m')

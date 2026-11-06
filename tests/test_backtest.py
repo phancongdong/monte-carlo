@@ -1,12 +1,12 @@
-import jesse.helpers as jh
-from jesse.config import reset_config
-from jesse.enums import timeframes, exchanges
-from jesse.factories import range_candles
-from jesse.modes import backtest_mode
-from jesse.routes import router
-from jesse.store import store
-from jesse.config import config
-from jesse.services import candle_service
+import montecarlo.helpers as jh
+from montecarlo.config import reset_config
+from montecarlo.enums import timeframes, exchanges
+from montecarlo.factories import range_candles
+from montecarlo.modes import backtest_mode
+from montecarlo.routes import router
+from montecarlo.store import store
+from montecarlo.config import config
+from montecarlo.services import candle_service
 
 
 def test_backtesting_one_route():

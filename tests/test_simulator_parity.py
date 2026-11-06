@@ -1,11 +1,11 @@
 import numpy as np
 
-import jesse.helpers as jh
-from jesse import research
-from jesse.config import reset_config
-from jesse.factories import candles_from_close_prices
-from jesse.strategies import Strategy
-from jesse.candle_pipelines.moving_block_bootstrap import MovingBlockBootstrapCandlesPipeline
+import montecarlo.helpers as jh
+from montecarlo import research
+from montecarlo.config import reset_config
+from montecarlo.factories import candles_from_close_prices
+from montecarlo.strategies import Strategy
+from montecarlo.candle_pipelines.moving_block_bootstrap import MovingBlockBootstrapCandlesPipeline
 
 # the trading-timeframe candles the strategy actually sees, captured per run
 _RECORDED = []

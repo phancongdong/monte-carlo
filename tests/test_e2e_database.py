@@ -1,9 +1,9 @@
 import pytest
 
-from jesse.models.BacktestSession import BacktestSession
-from jesse.models.Candle import Candle
-from jesse.services import e2e_database
-from jesse.services.db import postgres_schema
+from montecarlo.models.BacktestSession import BacktestSession
+from montecarlo.models.Candle import Candle
+from montecarlo.services import e2e_database
+from montecarlo.services.db import postgres_schema
 
 
 def configure_test_environment(monkeypatch, schema: str = 'e2e_dashboard') -> None:
@@ -18,7 +18,7 @@ def configure_test_environment(monkeypatch, schema: str = 'e2e_dashboard') -> No
         'POSTGRES_PORT': '5432',
     }
     monkeypatch.setattr(e2e_database, 'ENV_VALUES', values)
-    monkeypatch.setattr('jesse.services.db.ENV_VALUES', values)
+    monkeypatch.setattr('montecarlo.services.db.ENV_VALUES', values)
     monkeypatch.setattr(e2e_database, 'is_test_env', lambda: True)
 
 
@@ -55,7 +55,7 @@ def test_rejects_test_database_operations_outside_test_environment(monkeypatch):
 
 
 def test_postgres_schema_defaults_to_public(monkeypatch):
-    monkeypatch.setattr('jesse.services.db.ENV_VALUES', {})
+    monkeypatch.setattr('montecarlo.services.db.ENV_VALUES', {})
 
     assert postgres_schema() == 'public'
 

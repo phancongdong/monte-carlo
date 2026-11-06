@@ -1,9 +1,9 @@
 import pytest
 import numpy as np
-import jesse.helpers as jh
-from jesse.factories import candles_from_close_prices
-from jesse.strategies import Strategy
-from jesse import research
+import montecarlo.helpers as jh
+from montecarlo.factories import candles_from_close_prices
+from montecarlo.strategies import Strategy
+from montecarlo import research
 
 
 class _IsolationTradeStrategy(Strategy):
@@ -87,10 +87,10 @@ def _isolation_fingerprint(exchange: str, exchange_type: str) -> dict:
 
 
 def _assert_isolated_runtime_is_clean() -> None:
-    from jesse.config import config
-    from jesse.routes import router
-    from jesse.services.api import api
-    from jesse.store import store
+    from montecarlo.config import config
+    from montecarlo.routes import router
+    from montecarlo.services.api import api
+    from montecarlo.store import store
 
     assert config['app']['trading_mode'] == ''
     assert router.routes == []
@@ -229,7 +229,7 @@ def test_store_state_app_is_reset_properly_in_isolated_backtest():
     class TestStateApp(Strategy):
         def before(self) -> None:
             if self.index == 0:
-                from jesse.store import store
+                from montecarlo.store import store
                 assert store.app.daily_balance == [10000]
 
         def should_long(self) -> bool:
@@ -466,8 +466,8 @@ def test_representative_backtests_are_independent_of_run_order():
 
 
 def test_research_backtest_cleans_runtime_state_after_success():
-    from jesse.config import config
-    from jesse.store import store
+    from montecarlo.config import config
+    from montecarlo.store import store
 
     # Prime mode caches and shared strategy variables with values that cannot
     # belong to the research session.

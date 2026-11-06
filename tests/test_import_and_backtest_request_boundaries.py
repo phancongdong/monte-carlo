@@ -7,11 +7,11 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from jesse import exceptions
-from jesse.controllers import backtest_controller, candles_controller
-from jesse.mcp.tools.services import candles as mcp_candles_service
-from jesse.modes import backtest_mode, import_candles_mode
-from jesse.services import auth, redis
+from montecarlo import exceptions
+from montecarlo.controllers import backtest_controller, candles_controller
+from montecarlo.mcp.tools.services import candles as mcp_candles_service
+from montecarlo.modes import backtest_mode, import_candles_mode
+from montecarlo.services import auth, redis
 
 
 PASSWORD = 'request-boundary-password'
@@ -314,7 +314,7 @@ def test_mcp_import_status_preserves_serialized_failure(monkeypatch):
         'post',
         lambda *args, **kwargs: Response(),
     )
-    monkeypatch.setattr(mcp_candles_service.mcp_config, 'JESSE_API_URL', 'http://jesse.test')
+    monkeypatch.setattr(mcp_candles_service.mcp_config, 'JESSE_API_URL', 'http://montecarlo.test')
     monkeypatch.setattr(mcp_candles_service.mcp_config, 'JESSE_PASSWORD', 'password')
 
     result = mcp_candles_service.get_candle_import_status_service('import-id')
@@ -494,7 +494,7 @@ def test_backtest_cancellation_is_checked_on_the_execution_path(monkeypatch):
 def test_backtest_runtime_failure_is_persisted_once_with_its_type(monkeypatch):
     events = []
     backtest_model = __import__(
-        'jesse.models.BacktestSession',
+        'montecarlo.models.BacktestSession',
         fromlist=['store_backtest_session'],
     )
     monkeypatch.setattr(backtest_mode.jh, 'is_unit_testing', lambda: True)

@@ -1,5 +1,5 @@
-from jesse.factories import range_candles
-from jesse.services import candle_service
+from montecarlo.factories import range_candles
+from montecarlo.services import candle_service
 import numpy as np
 
 
